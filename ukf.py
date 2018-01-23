@@ -1,10 +1,10 @@
 import logging
 import numpy as np
-import integrators
+# import integrators
 import matplotlib.pyplot as plt
-from integrators import ruku4
+# from integrators import ruku4
 import scipy.linalg as la
-from epileptor_util import Model
+from models import Model
 
 
 logging.basicConfig(level=logging.WARN)
@@ -67,7 +67,7 @@ def keep_in_bounds(value, bounds=(-100, 100)):
     return type_temp(value) if type_temp != np.ndarray else value
 
 
-class unscented_kalman_filter(Model):
+class ukf_model(Model):
     def __init__(self, model, parameter_sigma=15e-3, state_sigma=15e-3,
                  observation_sigma=None):
         self.model = model
@@ -140,7 +140,7 @@ class unscented_kalman_filter(Model):
             sigma_points[:, i] += xhat
         self.sigma_points = keep_in_bounds(sigma_points, bounds=(-100, 100))
 
-    def unscented_kalman(self, initial_estimate=[]):
+    def filter(self, initial_estimate=[]):
         model = self.model
         self.set_initial_estimate(initial_estimate=initial_estimate)
         for k in range(1, model.num_samples):
