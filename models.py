@@ -86,7 +86,7 @@ class Protocol(object):
 
     """Protocol"""
 
-    def __init__(self, params,
+    def __init__(self, params=None,
                  total_time=2500, prot_id=None, **kwargs):
         self.prot_id = prot_id
         self.params = dict(params)
@@ -251,27 +251,18 @@ def load_protocols(filename=None, plot=plot, total_time=None, dt_sample=0.1):
     #                           total_time=total_time, dt_sample=dt_sample).
     #           generate_simulation(plot=plot)]
 
-    if filename is None:
-        if total_time is None:
-            total_time = 2500
-
-        protocols = [Protocol(prot_id='default', total_time=total_time)]
-        target = [epileptor_model(params=protocols[0].params,
-                                  total_time=total_time, dt_sample=dt_sample).
-                  generate_simulation(plot=plot)[0]]
+    prot_id = filename.split('/')[-1]
+    data, sample_freq = read_file(filename)
+    data, dt_sample, num_samples = \
+        subsample_data(data, sample_freq, dt_sample)
+    if total_time is None:
+        total_time = int(num_samples * dt_sample)
+        print(total_time)
     else:
-        prot_id = filename.split('/')[-1]
-        data, sample_freq = read_file(filename)
-        data, dt_sample, num_samples = \
-            subsample_data(data, sample_freq, dt_sample)
-        if total_time is None:
-            total_time = int(num_samples * dt_sample)
-            print(total_time)
-        else:
-            total_time = int(min(total_time, num_samples // dt_sample))
+        total_time = int(min(total_time, num_samples // dt_sample))
 
-        protocols = [Protocol(prot_id=prot_id, total_time=total_time)]
-        target = [data[:int(total_time / dt_sample)]]
+    protocols = [Protocol(prot_id=prot_id, total_time=total_time)]
+    target = [data[:int(total_time / dt_sample)]]
 
     # f = EdfReader(
     #     '/Users/emilyschlafly/BU/Kramer_rotation/ieeg_data/' +
