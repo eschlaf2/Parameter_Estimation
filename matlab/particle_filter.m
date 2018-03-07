@@ -67,7 +67,7 @@ posterior = cell2mat(arrayfun(@(a,b) unifrnd(a, b, 1, N), ...
 	stateBounds(:, 1), stateBounds(:, 2), ...
 	'uniformoutput', false));
 
-% Initialize estimated states, weights and first prior
+% Initialize estimated states, weights, first prior, window
 estimates = zeros(NUM_ALL, K);
 estimates(1:NUM_STATES, 1) = s0;
 weights = 1/N * ones(1, N);
@@ -75,16 +75,8 @@ prior = [s0 .* ones(NUM_STATES, N); posterior; weights];
 measNoise = [0 * s0; .1 * ones(NUM_PARAMS,1); 0]; 
 
 for k = 2:min(length(obsn), 1e3)		% for each observation
-% 	estimates(NUM_STATES + 1:end, k) = mean(prior, 2);	% ... get the current estimate
-% 	if k > 1
-% 		for i = dt:dt:delta*1e3
-% 			estimates(:, k) = ...
-% 				transitionFcn([estimates(1:NUM_STATES, k-1); estimates((NUM_STATES + 1): end, k)], false);
-% 		end
-% 	end
-% 	prediction = [estimates(1:NUM_STATES, k-1) .* ones(NUM_STATES, N); prior];
+
 	prediction = prior;
-% 	prediction(1:NUM_STATES, :) = estimates(1:NUM_STATES, k) .* ones(NUM_STATES, N);
 	for i = dt:dt:delta*1e3
 		prediction = transitionFcn(prediction, false);	% ... integrate states
 	end
@@ -92,18 +84,11 @@ for k = 2:min(length(obsn), 1e3)		% for each observation
 		warning('debug')
 	end
 	likelihood = likelihoodFcn(prediction, obsn(k)); % ... calculate likelihood
-% 	prediction(end,:) = prediction(end,:) .* likelihood; % ... update weights
 	posterior = resamplingFcn(prediction, likelihood, 0, measNoise); % ... resample particles
 	p = [sum(posterior(1:end-1, :) .* posterior(end, :), 2); mean(posterior(end, :))];
-% 	estimates(:, k) = estimates(:, k-1);
-% 	for i = dt:dt:delta*1e3
-% 		estimates(:, k) = transitionFcn([estimates(1:NUM_STATES, k); p], false);
-% 	end
+
 	estimates(:, k) = [sum(posterior(1:end-1, :) .* posterior(end, :), 2); mean(posterior(end,:))];
-% 	likelihood = likelihoodFcn(...
-% 		[estimates(1:NUM_STATES, k) .* ones(NUM_STATES, N);	...
-% 		posterior], obsn(k));
-% 	posterior(end,:) = likelihood / sum(likelihood);
+
 	prior = posterior; % ... get the next prior 
 	
 	if k == 100
@@ -123,7 +108,6 @@ for k = 2:min(length(obsn), 1e3)		% for each observation
 		pause(1e-6)
 	end
 end
-% estimates(:, K + 1) = mean(prior, 2);
 
 %% Plot results
 figure(3); fullwidth()
