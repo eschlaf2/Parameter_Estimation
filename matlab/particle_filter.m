@@ -104,7 +104,7 @@ for k = 1:min(K, 1e3)		% for each observation
 	[posterior, ~] = resamplingFcn(prediction, likelihood, 0, procNoise); % ... resample particles
 		
 	% Get next estimates using weighted mean
-	estimates(:, k) = [sum(posterior(1:end-1, :) .* posterior(end, :), 2); mean(posterior(end, :))];
+	estimates(:, k) = [sum(posterior(1:end-1, :) .* posterior(end, :), 2); mean(likelihood)];
 	temp = sort(posterior, 2);
 	bounds(:, k, :) = temp(:, [floor(N*0.025) ceil(N*0.975)]);
 	
@@ -133,27 +133,35 @@ end
 colors = lines(7);
 
 figure(3); fullwidth()
-stem(tSpan(1:k), obsn(1:k)'); hold on;
+stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
 plot(tSpan(1:k), estimates(1, 1:k)/Vth, 'Color', colors(2,:));
 plot(tSpan(1:k), sim(1, 1:binwidth:k*binwidth)/Vth, 'Color', colors(1,:))
 plot(tSpan(1:k), ones(1, k), '--', 'Color', .5*[1 1 1]); hold off;
 ylim(1.1*(get(gca,'YLim') - mean(get(gca, 'Ylim'))) + mean(get(gca, 'YLim')));
 legend('Spikes','Estimated Voltage', 'True Voltage', 'location', 'best');
+xlabel('Time [s]'); ylabel('Voltage [mV]');
+title('Voltage')
 
 figure(4); fullwidth()
-plot(estimates(2:4, 1:k)', 'linewidth', 2); legend(stateNames(2:4))
+plot((tSpan(1:k) .* ones(3, k))', estimates(2:4, 1:k)', 'linewidth', 2); 
+legend(stateNames(2:4))
 hold on; set(gca, 'ColorOrderIndex', 1)
-plot(sim(2:4, 1:binwidth:k*binwidth)', 'o'); hold off;
+plot((tSpan(1:k) .* ones(3, k))', sim(2:4, 1:binwidth:k*binwidth)', ':', 'linewidth', 2); hold off;
+xlabel('Time [s]');
+title('Hidden States')
 
 figure(5); fullwidth()
 dummy = NUM_STATES + 1;
 names = [stateNames(:); paramNames(:)];
-shape = [ [1:k, k:-1:1]; [bounds(dummy:end-1, 1:k, 1), bounds(dummy:end-1, k:-1:1, 2)] ];
-plot(estimates(dummy:end - 1, 1:k)', 'linewidth', 2, 'displayname', sprintf('%s Est', names{dummy:end})); 
-patch(shape(1,:), shape(2,:), 'b', 'FaceColor', colors(1,:), 'facealpha', .5, 'edgecolor', 'none', 'displayname', '95CI');
+shapeX = repmat(tSpan([1:k, k:-1:1]), NUM_PARAMS, 1);
+shapeY = [bounds(dummy:end-1, 1:k, 1), bounds(dummy:end-1, k:-1:1, 2)];
+plot(repmat(tSpan(1:k), NUM_PARAMS, 1)', estimates(dummy:end - 1, 1:k)', 'linewidth', 2); 
+patch(shapeX, shapeY, 'b', 'FaceColor', colors(1,:), 'facealpha', .5, 'edgecolor', 'none');
 hold on; set(gca, 'ColorOrderIndex', 1)
-plot(sim(dummy:end, 1:binwidth:k*binwidth)', '--', 'displayname', sprintf('%s Truth', names{dummy:end})); 
-legend(); hold off;
+plot(repmat(tSpan(1:k), NUM_PARAMS, 1)', sim(dummy:end, 1:binwidth:k*binwidth)', '--'); 
+legend(sprintf('%s Est [mv]', names{dummy:end}), '95CI', sprintf('%s True [mv]', names{dummy:end})); hold off;
+xlabel('Time [s]');
+title('Parameter estimates')
 
 
 figure(6); fullwidth()

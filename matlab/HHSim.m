@@ -1,14 +1,9 @@
 % sim
 
-ops = struct(...
-	'noiseStd',	'[1 0 0 0]', ... % Integration options
-	'delta',	'0.01', ...
-	'W',		'5', ...	% Conditional intensity options
-	'Vth',		'0', ...
-	'hh',		'1/5', ...
-	'b',		'h/10' ...
-);
 
+noiseStd = [1 0 0 0]; % ... Measurment noise
+delta = 0.01; % integration step [ms]
+Vth = 0; % count spikes when voltage goes above Vth
 
 V =	-70;
 n = 0.0147; 
@@ -25,11 +20,6 @@ I = -2.5;
 s0 = [V; n; h; B];
 
 params = [gB; EB; VBth; SB; tauB; I];
-
-%% Set model options
-for f = fieldnames(ops)'
-	eval([f{:} '=' ops.(f{:}) ';']);
-end
 
 %% Run Sim
 TOTAL_TIME = 1e3 * 1/delta; % time steps to simulate (ms * fs)
