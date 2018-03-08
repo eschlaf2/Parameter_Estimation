@@ -1,24 +1,24 @@
 function [likelihood, window] = ...
-	likelihoodFcnMeng2011(particles, observation, window, W, Vth, h, b, delta)
+	likelihoodFcnMeng2011(window, observation, t, Vth)
 % Calculates probabilities of each particle given observation
 % Inputs:
-%	particles ...				m x n array where m is the number of
-%								variables and n is the number of particles.
-%								m should be an even number with the first
-%								half of the indices corresponding to
-%								magnitudes and second half to phases
-%	observation ...				Scalar measurement (number of spikes in
-%								bin k with length dt)
+%	window ...					m x n x k array where m is the number of
+%								variables, n is the number of particles and
+%								k is the time span of the window (in
+%								samples).
+%	observation ...				Indicator measurement (is there a spike in the bin)
+%	t ...						k x 1 vector of times
+%	Vth ...						scalar voltage threshold [mV]
 
 
 
 %% Set model parameters
 
-[~, NPARTS] = size(particles); % number of particles
+delta = t(2) - t(1);
 
 window = squeeze(window(1, :, :))'; % Keep only the voltage of each particle
 
-lambda = sum(g(window, Vth) .* f(((1:W)' - k)*delta));
+lambda = sum(g(window, Vth) .* f(t(:)));
 likelihood = exp(observation * log(lambda*delta) - lambda*delta);
 likelihood(isnan(likelihood)) = 0;
 

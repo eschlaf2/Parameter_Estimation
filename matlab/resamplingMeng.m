@@ -1,4 +1,4 @@
-function posterior = resamplingMeng(prior, likelihood, trigger, noiseStd)
+function [posterior, inds] = resamplingMeng(prior, likelihood, trigger, noiseStd)
 % See Meng, et al., 2014
 % At every spike time do a residual sampling scheme.
 %	Retain M = nw copies of each particle and then supplement missing
@@ -10,7 +10,6 @@ n = size(prior, 2); % number of particles
 
 % Update weights
 weights = prior(end, :) .* likelihood + 1e-6;
-% weights = weights / sum(weights);
 weights = weights/sum(weights);
 prior(end, :) = weights;
 
@@ -33,6 +32,7 @@ if trigger
 	r = rand(1, n - sum(M));
 	newParts = floor(interp1(cumsum(p), 1:n, r, 'linear', 0)) + 1;
 	inds = [inds, newParts];
+	prior(end,:) = 1/n;
 	
 else % bootstrap
 	try 
@@ -46,7 +46,8 @@ end
 
 posterior = prior(:, inds) + ... % get new particles
 	noiseStd .* randn(size(prior)); % add jitter
-posterior(end,:) = 1/n;
+posterior(end, :) = posterior(end, :) / sum(posterior(end, :));
+% posterior(end,:) = 1/n;
 
 % posterior = cell2mat(arrayfun(@(i) prior(:, ...
 % 	interp1(cumsum(p), prior(i, :), rand(1, n), 'linear', 0), ...
