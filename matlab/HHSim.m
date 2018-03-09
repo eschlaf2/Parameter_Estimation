@@ -1,7 +1,8 @@
 % sim
 
-ops = set_options();
-
+noiseStd = [1 0 0 0]; % Integration options
+delta = 0.01;
+Vth = 30;
 
 V =	-70;
 n = 0.0147; 
@@ -19,10 +20,6 @@ s0 = [V; n; h; B];
 
 params = [gB; EB; VBth; SB; tauB; I];
 
-%% Set model options
-for f = fieldnames(ops)'
-	eval([f{:} '=' ops.(f{:}) ';']);
-end
 
 %% Run Sim
 TOTAL_TIME = 1e3 * 1/delta; % time steps to simulate (ms * fs)

@@ -102,7 +102,7 @@ for k = 2:min(length(obsn), 1e3)		% for each observation
 		hold on; plot(sim(x + NUM_STATES, k * binwidth), sim(y + NUM_STATES, k*binwidth), 'r*'); hold off;
 		hold on; plot(estimates(x + NUM_STATES, k), estimates(y + NUM_STATES, k), 'b*'); hold off;
 		xlim(stateBounds(x,:)); ylim(stateBounds(y,:));
-		colormap('cool'); colorbar
+		colormap('cool'); caxis([0 1/N]); colorbar
 		title(sprintf('%d: %d', k, obsn(k)))
 		drawnow;
 		pause(1e-6)
