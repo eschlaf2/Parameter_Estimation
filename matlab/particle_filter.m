@@ -35,7 +35,7 @@ switch model
 		
 		transitionFcn = @(particles, reverse) HH_stateTrnsn(particles, measNoise, dt, reverse);
 		likelihoodFcn = @(window, obsn) ...
-			likelihoodFcnMeng2011(window, obsn, t, Vth);
+			likelihoodFcnMeng(window, obsn, t(1:fs * delta:end), Vth);
 % 		likelihoodFcn = @(particles, obsn) normpdf(obsn - particles(1,:), 0, 1) + 1e-6; 
 		resamplingFcn = @resamplingMeng;
 		
@@ -76,6 +76,9 @@ prior = [s0 .* ones(NUM_STATES, N); posterior; weights];
 procNoise = [0 * s0; procNoise .* ones(NUM_PARAMS,1); 0]; 
 measNoise = [measNoise(:); zeros(NUM_ALL - numel(measNoise), 1)];
 
+paramDistX = linspace(-15, 5, 1e3);
+paramDist = zeros(NUM_PARAMS, N, K, 'single');
+
 % Initialize window
 % if ~mod(W, 2); W = W+1; end
 % halfWindow = floor(W/2);
@@ -97,10 +100,11 @@ for k = 1:min(K, 1e3)		% for each observation
 	
 	% Update window
 	window = updateWindow(prediction, t, transitionFcn);
+	window = window(:,:,1:binwidth:end);
 	
 	likelihood = likelihoodFcn(window, obsn(k)); % ... calculate likelihood
 	[posterior, ~] = resamplingFcn(prediction, likelihood, 0, procNoise); % ... resample particles
-		
+	paramDist(:, :, k) = interp1(posterior(end-1, :), posterior(end,:), paramDistX, 'linear', 0);
 	% Get next estimates using weighted mean
 	estimates(:, k) = [sum(posterior(1:end-1, :) .* posterior(end, :), 2); mean(likelihood)];
 	temp = sort(posterior, 2);
@@ -113,10 +117,11 @@ for k = 1:min(K, 1e3)		% for each observation
 		disp('look around')
 	end
 	
-	if 1
+	if 1 && mod(k, 2)
 		figure(999)
 		x = 1; y = 1;
-		scatter(posterior(NUM_STATES + x, :), posterior(NUM_STATES + y, :), 16, posterior(end,:), 'filled');
+		inds = randsample(N, 100);
+		scatter(posterior(NUM_STATES + x, inds), posterior(NUM_STATES + y, inds), 16, posterior(end, inds), 'filled');
 		hold on; plot(sim(x + NUM_STATES, k * binwidth), sim(y + NUM_STATES, k*binwidth), 'r*'); hold off;
 		hold on; plot(estimates(x + NUM_STATES, k), estimates(y + NUM_STATES, k), 'b*'); hold off;
 		xlim(stateBounds(x,:)); ylim(stateBounds(y,:));
@@ -164,6 +169,10 @@ title('Parameter estimates')
 
 figure(6); fullwidth()
 plot(estimates(end, 1:k)); title('Mean Likelihood');
+
+figure(7); fullwidth()
+contourf(1:k-1, paramDistX, squeeze(paramDist(1, :, 1:k-1)), 'linestyle', 'none')
+colorbar()
 
 
 %% Supplementary functions
