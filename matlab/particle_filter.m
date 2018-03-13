@@ -28,11 +28,9 @@ switch model
 		
 		W = 5 / dt + 1;	% window [samples] (ms * fs)
 		Vth = 30; % Voltage threshold [mV]
-		h = 1/W; % weight
-		b = h/10; % allowance
 		t = ((1:W) - ceil(W/2)) * dt; % time [ms]
 		
-		delta = 5e-4; % binwidth [s]
+		delta = 1e-3; % binwidth [s]
 
 		
 		transitionFcn = @(particles, reverse) HH_stateTrnsn(particles, measNoise, dt, reverse);
@@ -115,15 +113,15 @@ for k = 1:min(K, 1e3)		% for each observation
 		disp('look around')
 	end
 	
-	if 0
+	if 1
 		figure(999)
 		x = 1; y = 1;
 		scatter(posterior(NUM_STATES + x, :), posterior(NUM_STATES + y, :), 16, posterior(end,:), 'filled');
 		hold on; plot(sim(x + NUM_STATES, k * binwidth), sim(y + NUM_STATES, k*binwidth), 'r*'); hold off;
 		hold on; plot(estimates(x + NUM_STATES, k), estimates(y + NUM_STATES, k), 'b*'); hold off;
 		xlim(stateBounds(x,:)); ylim(stateBounds(y,:));
-		colormap('cool'); colorbar
-		title(sprintf('%d: %d', k, obsn(k)))
+		colormap('cool'); caxis([0 1/N]); colorbar
+		title(sprintf('%1.2f: %d', tSpan(k) * 1e3, obsn(k)))
 		drawnow;
 		pause(1e-6)
 	end

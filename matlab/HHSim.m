@@ -3,7 +3,7 @@
 
 noiseStd = [1 0 0 0]; % ... Measurment noise
 delta = 0.01; % integration step [ms]
-Vth = 0; % count spikes when voltage goes above Vth
+Vth = 30; % count spikes when voltage goes above Vth
 
 V =	-70;
 n = 0.0147; 
