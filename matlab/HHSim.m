@@ -1,6 +1,5 @@
 % sim
 
-
 noiseStd = [1 0 0 0]; % ... Measurment noise
 delta = 0.01; % integration step [ms]
 Vth = 30; % count spikes when voltage goes above Vth
