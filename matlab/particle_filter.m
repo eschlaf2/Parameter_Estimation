@@ -100,6 +100,7 @@ for k = 1:min(K, 1e3)		% for each observation
 	
 	% Update window
 	window = updateWindow(prediction, t, transitionFcn);
+% 	window = squeeze(min(reshape(window(:, :, 1:end-1), NUM_ALL, N, binwidth, []), 3));
 	window = window(:,:,1:binwidth:end);
 	
 	likelihood = likelihoodFcn(window, obsn(k)); % ... calculate likelihood
@@ -117,7 +118,7 @@ for k = 1:min(K, 1e3)		% for each observation
 		disp('look around')
 	end
 	
-	if 1 && mod(k, 2)
+	if 1 && ~mod(k, 5)
 		figure(999)
 		x = 1; y = 1;
 		inds = randsample(N, 100);
@@ -170,9 +171,17 @@ title('Parameter estimates')
 figure(6); fullwidth()
 plot(estimates(end, 1:k)); title('Mean Likelihood');
 
+%%
 figure(7); fullwidth()
-contourf(1:k-1, paramDistX, squeeze(paramDist(1, :, 1:k-1)), 'linestyle', 'none')
+contourf(tSpan(1:k-1), paramDistX, squeeze(paramDist(1, :, 1:k-1)), 'linestyle', 'none')
+caxis([0 2/N]); % colormap('gray')
 colorbar()
+hold on; 
+plot(repmat(tSpan(1:k), NUM_PARAMS, 1)', sim(dummy:end, 1:binwidth:k*binwidth)', 'r--'); 
+hold off; 
+xlabel('Time [s]');
+title('Parameter estimates')
+
 
 
 %% Supplementary functions
