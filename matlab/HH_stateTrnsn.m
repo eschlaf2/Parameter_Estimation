@@ -24,7 +24,7 @@ end
 NOISE = zeros(size(particles));
 NOISE(1:length(noiseStd), :) = noiseStd(:) .* particles(noiseParam, :);
 
-F = HH_dynamics(particles);
+F = HH_dynamics([], particles, delta);
 particles = particles + delta * F + NOISE .* randn(size(particles));
 for i = 1:size(bounds, 1)
 	particles(i, particles(i, :) > bounds(i, 2)) = bounds(i, 2);

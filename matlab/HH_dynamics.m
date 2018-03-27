@@ -1,5 +1,4 @@
-function F = HH_dynamics(state, varargin)
-
+function F = HH_dynamics(~, state)
 
 V = state(1, :);
 n = state(2, :);
@@ -11,6 +10,7 @@ VBth = state(7, :);
 SB = state(8, :);
 tauB = state(9, :);
 I = state(10, :);
+mNoise = state(11, :);
 
 F = zeros(size(state));
 
@@ -31,20 +31,13 @@ gNa = 100;
 gK = 7;
 gL = 0.25;
 
-for i = 1:2:nargin-1
-	if ~ischar(varargin{i}) || ~ischar(varargin{i + 1})
-		error('All arguments should be given as strings.')
-	end
-	eval([varargin{i} '=' varargin{i+1} ';']);
-end
-
-
 %% Calculate changes
 Vdot = (... % F1(V, n, h, B)
 	I - gK * n.^4 .* (V - EK) ... % drive current minus Potassium current
 	- gNa * mInf.^3 .* h .* (V - ENa) ... % Sodium current
 	- gB .* B .* (V - EB) ... % mystery current
-	- gL .* (V - EL)) / C; % Leak
+	- gL .* (V - EL)) / C ... % Leak
+	+ mNoise .* 100 * randn(); % Noise
 
 ndot = (nInf - n) ./ tauN; % F2(n)
 

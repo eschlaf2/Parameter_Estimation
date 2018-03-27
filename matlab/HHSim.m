@@ -27,13 +27,15 @@ states = [s0; params]; % initial states
 sim = zeros(numel(states), TOTAL_TIME); % to hold simulation results
 noise = [noiseStd(:) * mNoise; zeros(numel(params), 1)];
 
-for t = 1:TOTAL_TIME
-	dS = HH_dynamics(states); % dynamics
-	states = states + dS * delta + noise .* randn(size(states)); % updated states
-	too_high = states(2:4) > 1; states(too_high) = 1;
-	too_low = states(2:4) < 0; states(too_low) = 0;
-	sim(:, t) = states;
-end
+[t, sim] = ode23(@HH_dynamics, [0 1e3], states); sim = sim';
+
+% for t = 1:TOTAL_TIME
+% 	dS = HH_dynamics(states); % dynamics
+% 	states = states + dS * delta + noise .* randn(size(states)); % updated states
+% 	too_high = states(2:4) > 1; states(too_high) = 1;
+% 	too_low = states(2:4) < 0; states(too_low) = 0;
+% 	sim(:, t) = states;
+% end
 
 %% Plot Results
 figure(99); fullwidth()

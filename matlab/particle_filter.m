@@ -2,6 +2,8 @@
 
 model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
+N = 1e4; % number of particles; Meng used 1e4, but start at 1e3 for speed
+PLOT = false;
 
 %% Load firing times
 
@@ -44,7 +46,6 @@ switch model
 		resamplingFcn = @resamplingMeng;
 		
 		[s0, stateBounds] = HH_stateBounds(); % get initial conditions and parameter bounds
-		N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
 		
 end
 
@@ -119,7 +120,7 @@ for k = 1:min(K, 1e3)		% for each observation
 		disp('look around')
 	end
 	
-	if 1 && ~mod(k, 5)
+	if PLOT && ~mod(k, 5)
 		figure(999)
 		x = pEst(1); y = pEst(2);
 		inds = randsample(N, 100);
@@ -127,7 +128,7 @@ for k = 1:min(K, 1e3)		% for each observation
 		hold on; plot(sim(x + NUM_STATES, k * binwidth), sim(y + NUM_STATES, k*binwidth), 'r*'); hold off;
 		hold on; plot(estimates(x + NUM_STATES, k), estimates(y + NUM_STATES, k), 'b*'); hold off;
 		xlim(stateBounds(x,1:2)); ylim(stateBounds(y,1:2));
-		colormap('cool'); caxis([0 1/N]); colorbar
+		colormap('cool'); caxis([0 2/N]); colorbar
 		title(sprintf('%1.2f: %d', tSpan(k) * 1e3, obsn(k)))
 		drawnow;
 		pause(1e-6)
@@ -174,24 +175,26 @@ for i = 1:numel(pEst)
 	hold off;
 	legend();
 	title(['Estimated ' paramNames{pEst(i)}])
+	axis('tight')
 end
 xlabel('Time [s]');
 
 
 figure(6); fullwidth()
-plot(estimates(end, 1:k)); title('Mean Weights');
+plot(estimates(end, 1:k)); title('Mean Likelihood');
 
-figure(7); fullwidth()
-paramInd = 1;
-contourf(tSpan(1:k-1), paramDistX(paramInd, :), squeeze(paramDist(paramInd, :, 1:k-1)), 'linestyle', 'none')
-caxis([0 2/N]); % colormap('gray')
-colorbar()
-hold on; 
-plot(tSpan(1:k)', sim(NUM_STATES + pEst(paramInd), 1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
-hold off; 
+figure(7); fullwidth(numel(pEst) > 1)
+for i = 1:numel(pEst)
+	subplot(numel(pEst), 1, i)
+	contourf(tSpan(1:k-1), paramDistX(i, :), squeeze(paramDist(i, :, 1:k-1)), 'linestyle', 'none')
+	caxis([0 2/N]); % colormap('gray')
+	colorbar()
+	hold on; 
+	plot(tSpan(1:k)', sim(NUM_STATES + pEst(i), 1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
+	hold off; 
+	title([paramNames{pEst(i)} ' Estimate'])
+end
 xlabel('Time [s]');
-title('Parameter estimates')
-
 
 
 %% Supplementary functions
