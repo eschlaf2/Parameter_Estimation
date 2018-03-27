@@ -21,29 +21,31 @@ switch model
 	case 'why'	% easter egg
 		why
 	case 'HH'	% Hodgkin-Huxley
+		stateNames = {'V', 'n', 'h', 'B'};
+		paramNames = {'gB', 'EB', 'VBth', 'SB', 'tauB', 'I', 'mNoise'};
 		
-		measNoise = [1 0 0 0]; % std of measurement noise (vector with meas noise for each state)
-		procNoise = 0.1; % std of process noise (scalar or vector with proc noise for each param)
+		measNoise = [1 0 0 0]; % bool indicating which states have measurment noise
+		procNoise = 0.01; % std of process noise as proportion of range
 		dt = 0.01;	% integration step [ms]
 		
-		W = 5 / dt + 1;	% window [samples] (ms * fs)
+		W = 3;	% window (ms)
 		Vth = 30; % Voltage threshold [mV]
-		t = ((1:W) - ceil(W/2)) * dt; % time [ms]
+% 		t = ((1:W) - ceil(W/2)) * dt; % time [ms]
 		
 		delta = 1e-3; % binwidth [s]
 
 		
-		transitionFcn = @(particles, reverse) HH_stateTrnsn(particles, measNoise, dt, reverse);
+		transitionFcn = @(particles) HH_stateTrnsn(particles, measNoise, dt, ...
+			[stateNames paramNames{:}]);
 		likelihoodFcn = @(window, obsn) ...
-			likelihoodFcnMeng(window, obsn, t(1:fs * delta:end), Vth);
+			likelihoodFcnMeng(window, obsn, W, Vth, delta * 1e3);
+% 			likelihoodFcnMeng(window, obsn, t, Vth);
 % 		likelihoodFcn = @(particles, obsn) normpdf(obsn - particles(1,:), 0, 1) + 1e-6; 
 		resamplingFcn = @resamplingMeng;
 		
 		[s0, stateBounds] = HH_stateBounds(); % get initial conditions and parameter bounds
 		N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
 		
-		stateNames = {'V', 'n', 'h', 'B'};
-		paramNames = {'gB', 'EB', 'VBth', 'SB', 'tauB', 'I'};
 end
 
 %% Bin spike times
@@ -57,7 +59,7 @@ obsn = histcounts(spiketimes, binedges);
 NUM_STATES = size(s0, 1);
 NUM_PARAMS = size(stateBounds, 1);
 NUM_ALL = NUM_STATES + NUM_PARAMS + 1;
-K = length(obsn);
+K = length(obsn) - W;
 
 
 %% Initialize PF
@@ -68,49 +70,48 @@ posterior = cell2mat(arrayfun(@(a,b) unifrnd(a, b, 1, N), ...
 	'uniformoutput', false));
 
 % Initialize estimated states, weights, first prior
-estimates = zeros(NUM_ALL, K);
-bounds = zeros(NUM_ALL, K, 2); % for holding 95% bounds
-estimates(1:NUM_STATES, 1) = s0;
-weights = 1/N * ones(1, N);
-prior = [s0 .* ones(NUM_STATES, N); posterior; weights];
-procNoise = [0 * s0; procNoise .* ones(NUM_PARAMS,1); 0]; 
-measNoise = [measNoise(:); zeros(NUM_ALL - numel(measNoise), 1)];
+estimates = zeros(NUM_ALL, K); % for holding estimates
+ci = zeros(NUM_ALL, K, 2); % for holding 95% CI
+estimates(1:NUM_STATES, 1) = s0; % set initial conditions
+weights = 1/N * ones(1, N); % initialize all weights to 1/N
+prior = [s0 .* ones(NUM_STATES, N); posterior; weights]; % put everything together
+pNoise = [0 * s0; procNoise .* range(stateBounds(:, 1:2), 2); 0]; % noise to be injected into the filter
+% mNoise = [measNoise(:); zeros(NUM_ALL - numel(measNoise), 1)]; % noise in the measurement of the observable
+pEst = find(range(stateBounds(:, [1 2]), 2) > 0); % parameters being estimated
 
-paramDistX = linspace(-15, 5, 1e3);
-paramDist = zeros(NUM_PARAMS, N, K, 'single');
-
-% Initialize window
-% if ~mod(W, 2); W = W+1; end
-% halfWindow = floor(W/2);
-% t0 = ceil(W/2);
-% window = zeros([size(prior) W]);
+paramDistX = cell2mat(arrayfun(@(i) linspace(stateBounds(i, 1), stateBounds(i, 2), 1e3), pEst, ...
+	'UniformOutput', false));
+paramDist = zeros(numel(pEst), 1e3, K, 'single'); % for holding (interpolated) posteriors
 
 
 %% Run PF
 
 for k = 1:min(K, 1e3)		% for each observation
-
+	
 	prediction = prior;
-	for i = 1:binwidth
-		prediction = transitionFcn(prediction, false);	% ... integrate states
+	
+	for i = 1:binwidth % for each integration step within a bin
+		prediction = transitionFcn(prediction);	% ... integrate states
 	end
-	if any(isnan(prediction))
-		warning('debug')
+
+	% Update window of V surrounding t_k
+	window = updateWindow(prediction, W*binwidth, transitionFcn);
+	
+	likelihood = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+	[posterior, ~] = resamplingFcn(prediction, likelihood, 0, pNoise); % ... resample particles
+	
+	for p = 1:numel(pEst)
+		paramDist(p, :, k) = ...
+			interp1(posterior(NUM_STATES+pEst(p), :), posterior(end,:), paramDistX(p, :), 'linear', 0); % ... save distribution
 	end
 	
-	% Update window
-	window = updateWindow(prediction, t, transitionFcn);
-% 	window = squeeze(min(reshape(window(:, :, 1:end-1), NUM_ALL, N, binwidth, []), 3));
-	window = window(:,:,1:binwidth:end);
+	posterior(NUM_STATES + 1 : end, :) = ...
+		keep_in_bounds(posterior(NUM_STATES + 1 : end, :), stateBounds);
 	
-	likelihood = likelihoodFcn(window, obsn(k)); % ... calculate likelihood
-	[posterior, ~] = resamplingFcn(prediction, likelihood, 0, procNoise); % ... resample particles
-	paramDist(:, :, k) = interp1(posterior(end-1, :), posterior(end,:), paramDistX, 'linear', 0);
 	% Get next estimates using weighted mean
 	estimates(:, k) = [sum(posterior(1:end-1, :) .* posterior(end, :), 2); mean(likelihood)];
 	temp = sort(posterior, 2);
-	bounds(:, k, :) = temp(:, [floor(N*0.025) ceil(N*0.975)]);
-	
+	ci(:, k, :) = temp(:, [floor(N*0.025) ceil(N*0.975)]);
 
 	prior = posterior; % ... get the next prior 
 	
@@ -120,12 +121,12 @@ for k = 1:min(K, 1e3)		% for each observation
 	
 	if 1 && ~mod(k, 5)
 		figure(999)
-		x = 1; y = 1;
+		x = pEst(1); y = pEst(2);
 		inds = randsample(N, 100);
 		scatter(posterior(NUM_STATES + x, inds), posterior(NUM_STATES + y, inds), 16, posterior(end, inds), 'filled');
 		hold on; plot(sim(x + NUM_STATES, k * binwidth), sim(y + NUM_STATES, k*binwidth), 'r*'); hold off;
 		hold on; plot(estimates(x + NUM_STATES, k), estimates(y + NUM_STATES, k), 'b*'); hold off;
-		xlim(stateBounds(x,:)); ylim(stateBounds(y,:));
+		xlim(stateBounds(x,1:2)); ylim(stateBounds(y,1:2));
 		colormap('cool'); caxis([0 1/N]); colorbar
 		title(sprintf('%1.2f: %d', tSpan(k) * 1e3, obsn(k)))
 		drawnow;
@@ -135,6 +136,7 @@ end
 
 %% Plot results
 colors = lines(7);
+k = k-1;
 
 figure(3); fullwidth()
 stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
@@ -154,30 +156,38 @@ plot((tSpan(1:k) .* ones(3, k))', sim(2:4, 1:binwidth:k*binwidth)', ':', 'linewi
 xlabel('Time [s]');
 title('Hidden States')
 
-figure(5); fullwidth()
-dummy = NUM_STATES + 1;
-names = [stateNames(:); paramNames(:)];
-shapeX = repmat(tSpan([1:k, k:-1:1]), NUM_PARAMS, 1);
-shapeY = [bounds(dummy:end-1, 1:k, 1), bounds(dummy:end-1, k:-1:1, 2)];
-plot(repmat(tSpan(1:k), NUM_PARAMS, 1)', estimates(dummy:end - 1, 1:k)', 'linewidth', 2); 
-patch(shapeX, shapeY, 'b', 'FaceColor', colors(1,:), 'facealpha', .5, 'edgecolor', 'none');
-hold on; set(gca, 'ColorOrderIndex', 1)
-plot(repmat(tSpan(1:k), NUM_PARAMS, 1)', sim(dummy:end, 1:binwidth:k*binwidth)', '--'); 
-legend(sprintf('%s Est [mv]', names{dummy:end}), '95CI', sprintf('%s True [mv]', names{dummy:end})); hold off;
+figure(5); fullwidth(1)
+for i = 1:numel(pEst)
+	subplot(numel(pEst), 1, i)
+	cla;
+	shapeX = tSpan([1:k, k:-1:1]);
+	shapeY = [ci(NUM_STATES + pEst(i), 1:k, 1), ci(NUM_STATES + pEst(i), k:-1:1, 2)];
+	patch(shapeX, shapeY, 'b', 'FaceColor', colors(i,:), 'facealpha', .3, ...
+		'edgecolor', 'none', 'displayname', '95CI');
+	hold on;
+	plot(tSpan(1:k), estimates(NUM_STATES + pEst(i), 1:k), 'linewidth', 2, ...
+		'displayname', sprintf('%s Est', paramNames{pEst(i)}), ...
+		'Color', colors(i, :)); 
+	plot(tSpan(1:k), sim(NUM_STATES + pEst(i), 1:binwidth:k*binwidth)', '--', ...
+		'displayname', sprintf('%s True', paramNames{pEst(i)}), ...
+		'Color', colors(i, :)); 
+	hold off;
+	legend();
+	title(['Estimated ' paramNames{pEst(i)}])
+end
 xlabel('Time [s]');
-title('Parameter estimates')
 
 
 figure(6); fullwidth()
-plot(estimates(end, 1:k)); title('Mean Likelihood');
+plot(estimates(end, 1:k)); title('Mean Weights');
 
-%%
 figure(7); fullwidth()
-contourf(tSpan(1:k-1), paramDistX, squeeze(paramDist(1, :, 1:k-1)), 'linestyle', 'none')
+paramInd = 1;
+contourf(tSpan(1:k-1), paramDistX(paramInd, :), squeeze(paramDist(paramInd, :, 1:k-1)), 'linestyle', 'none')
 caxis([0 2/N]); % colormap('gray')
 colorbar()
 hold on; 
-plot(repmat(tSpan(1:k), NUM_PARAMS, 1)', sim(dummy:end, 1:binwidth:k*binwidth)', 'r--'); 
+plot(tSpan(1:k)', sim(NUM_STATES + pEst(paramInd), 1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
 hold off; 
 xlabel('Time [s]');
 title('Parameter estimates')
@@ -186,21 +196,34 @@ title('Parameter estimates')
 
 %% Supplementary functions
 
-function window = updateWindow(prediction, t, transitionFcn)
+function window = updateWindow(prediction, W, transitionFcn)
 
-t0 = find(t == 0);
-window = zeros([size(prediction) numel(t)]);
-fwd = numel(t) - t0;
-bkwd = t0 - 1;
+% 	t0 = find(t == 0);
+	window = zeros([size(prediction) W]);
+% 	fwd = numel(t) - t0;
+% 	bkwd = t0 - 1;
 
-window(:, :, t0) = prediction;
-	for i = 1:min(fwd, bkwd)
-		window(:, :, t0 - i) = transitionFcn(window(:, :, t0 - i + 1), true); % ... project backward
-		window(:, :, t0 + i) = transitionFcn(window(:, :, t0 + i - 1), false); % ... project forward
-	end
-	for i = min(fwd, bkwd):max(fwd, bkwd)
-		sgn = -1^(bkwd > fwd);
-		window(:, :, t0 + sgn * i) = transitionFcn(window(:, :, t0 + sgn * (i - 1)), sgn == -1);
+	window(:, :, 1) = prediction;
+	for i = 2:W
+		window(:, :, i) = transitionFcn(window(:, :, i - 1));
 	end
 		
+end
+
+function bounded = keep_in_bounds(data, bounds)
+% bounce 
+bounded = data;
+bound_inds = bounds(:, 3) > 0;
+data = data(bound_inds, :);
+new_range = bounds(:, 3) .* range(bounds(:, 1:2), 2);
+bounds = mean(bounds(:, 1:2), 2) + new_range / 2 * [-1 1];
+bounds = bounds(bound_inds, 1:2);
+while any((data > bounds(:, 2)) + (data < bounds(:, 1)))
+	too_high = data > bounds(:, 2);
+	data(too_high) = 2 * bounds(any(too_high, 2), 2) - data(too_high);
+	too_low = data < bounds(:, 1);	
+	data(too_low) = 2 * bounds(any(too_low, 2), 1) - data(too_low);
+end
+bounded(bound_inds, :) = data;
+
 end

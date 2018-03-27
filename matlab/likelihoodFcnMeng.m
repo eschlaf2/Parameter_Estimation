@@ -1,4 +1,4 @@
-function [likelihood, window] = likelihoodFcnMeng(window, observation, t, Vth)
+function [likelihood, window] = likelihoodFcnMeng(window, observation, W, Vth, delta)
 % Calculates probabilities of each particle given observation
 % Inputs:
 %	window ...					m x n x k array where m is the number of
@@ -10,17 +10,19 @@ function [likelihood, window] = likelihoodFcnMeng(window, observation, t, Vth)
 %	Vth ...						scalar voltage threshold [mV]
 
 %% Set parameters
-W = numel(t);
 h = 1/W; % weight
 b = h/10; % allowance
 N = size(window, 2); % number of particles
-delta = t(2) - t(1);
 
 window = squeeze(window(1, :, :))'; % Keep only the voltage of each particle
+crossings = sum(diff(window > 30, 1) > 0);
 
-lambda = h * ones(1, N);	% Compute lambda_k of each particle
-lambda(window(1,:) >= Vth) = b;
-lambda(all(window <= Vth)) = b;
+% lambda = h * ones(1, N);	% Compute lambda_k of each particle
+% % lambda(window(1,:) >= Vth) = b;
+% lambda(all(window <= Vth)) = b;
+
+lambda = h * 1.1./(abs(crossings - observation) + 1);
+lambda(crossings == 0) = b;
 
 likelihood = exp(observation * log(lambda*delta) - lambda*delta);
 

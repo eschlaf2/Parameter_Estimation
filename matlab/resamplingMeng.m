@@ -7,19 +7,27 @@ function [posterior, inds] = resamplingMeng(prior, likelihood, trigger, noiseStd
 % Otherwise bootstrap
 
 N = size(prior, 2); % number of particles
-rho = .96; % discount factor
+inds = noiseStd > 0;
 
 % Update weights
 weights = prior(end, :) .* likelihood + 1e-6;
 weights = weights/sum(weights);
 prior(end, :) = weights;
 
+cc = corrcoef(prior([inds(1:end-1); true], :)');
+if numel(unique(likelihood)) == 1
+	rho = 1;
+else
+	rho = 1.01 - .06 * abs(cc(2:end, 1)); % discount factor
+end
+
+
 % Draw new parameters
 theta = prior(noiseStd > 0, :);
-m = rho * theta + (1 - rho) * sum(weights .* theta, 2);
-h2 = 1 - rho^2;
+m = rho .* theta + (1 - rho) .* sum(weights .* theta, 2);
+h2 = 1 - rho.^2;
 sigma = std(theta, [], 2);
-noiseStd(noiseStd > 0) = max(h2 * sigma, noiseStd(noiseStd > 0));
+noiseStd(noiseStd > 0) = max(h2 .* sigma, noiseStd(noiseStd > 0));
 prior(noiseStd > 0, :) = m;
 
 % Resample if triggered ...
