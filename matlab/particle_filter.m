@@ -2,8 +2,8 @@
 
 model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
-N = 1e4; % number of particles; Meng used 1e4, but start at 1e3 for speed
-PLOT = false;
+N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
+PLOT = true;
 
 %% Load firing times
 
@@ -26,7 +26,7 @@ switch model
 		stateNames = {'V', 'n', 'h', 'B'};
 		paramNames = {'gB', 'EB', 'VBth', 'SB', 'tauB', 'I', 'mNoise'};
 		
-		measNoise = [1 0 0 0]; % bool indicating which states have measurment noise
+% 		measNoise = [1 0 0 0]; % bool indicating which states have measurement noise
 		procNoise = 0.01; % std of process noise as proportion of range
 		dt = 0.01;	% integration step [ms]
 		
@@ -34,13 +34,12 @@ switch model
 		Vth = 30; % Voltage threshold [mV]
 % 		t = ((1:W) - ceil(W/2)) * dt; % time [ms]
 		
-		delta = 1e-3; % binwidth [s]
+		delta = 1; % binwidth [ms]
 
 		
-		transitionFcn = @(particles) HH_stateTrnsn(particles, measNoise, dt, ...
-			[stateNames paramNames{:}]);
+		transitionFcn = @(particles, t) HH_stateTrnsn(particles, t, dt, []);
 		likelihoodFcn = @(window, obsn) ...
-			likelihoodFcnMeng(window, obsn, W, Vth, delta * 1e3);
+			likelihoodFcnMeng(window, obsn, W, Vth, delta);
 % 			likelihoodFcnMeng(window, obsn, t, Vth);
 % 		likelihoodFcn = @(particles, obsn) normpdf(obsn - particles(1,:), 0, 1) + 1e-6; 
 		resamplingFcn = @resamplingMeng;
@@ -50,9 +49,9 @@ switch model
 end
 
 %% Bin spike times
-binwidth = fs * delta; % samples per bin
+binwidth = fs * delta * 1e-3; % samples per bin
 binedges = 0:binwidth:(max(spiketimes) + binwidth);
-tSpan = (1: length(binedges)-1) * delta;	% time [s]
+tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
 obsn = histcounts(spiketimes, binedges);
 % obsn = mean(reshape(sim(1,:)', binwidth, []));
 
@@ -86,14 +85,20 @@ paramDist = zeros(numel(pEst), 1e3, K, 'single'); % for holding (interpolated) p
 
 
 %% Run PF
-
+options = odeset('vectorized', 'on');
+step = 100;
 for k = 1:min(K, 1e3)		% for each observation
 	
 	prediction = prior;
 	
 	for i = 1:binwidth % for each integration step within a bin
-		prediction = transitionFcn(prediction);	% ... integrate states
+		prediction = transitionFcn(prediction, k);	% ... integrate states
 	end
+	
+% 	for p = 1:step:N
+% 		[~, temp] = ode23t(@HH_dynamics, [0 delta], prior(:, p:p+step-1), options);
+% 		prediction(:, p:p+step-1) = reshape(temp(end, :), NUM_ALL, []);
+% 	end
 
 	% Update window of V surrounding t_k
 	window = updateWindow(prediction, W*binwidth, transitionFcn);
@@ -101,13 +106,13 @@ for k = 1:min(K, 1e3)		% for each observation
 	likelihood = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
 	[posterior, ~] = resamplingFcn(prediction, likelihood, 0, pNoise); % ... resample particles
 	
+	posterior(NUM_STATES + 1 : end, :) = ...
+		keep_in_bounds(posterior(NUM_STATES + 1 : end, :), stateBounds);
+	
 	for p = 1:numel(pEst)
 		paramDist(p, :, k) = ...
 			interp1(posterior(NUM_STATES+pEst(p), :), posterior(end,:), paramDistX(p, :), 'linear', 0); % ... save distribution
 	end
-	
-	posterior(NUM_STATES + 1 : end, :) = ...
-		keep_in_bounds(posterior(NUM_STATES + 1 : end, :), stateBounds);
 	
 	% Get next estimates using weighted mean
 	estimates(:, k) = [sum(posterior(1:end-1, :) .* posterior(end, :), 2); mean(likelihood)];
@@ -157,7 +162,7 @@ plot((tSpan(1:k) .* ones(3, k))', sim(2:4, 1:binwidth:k*binwidth)', ':', 'linewi
 xlabel('Time [s]');
 title('Hidden States')
 
-figure(5); fullwidth(1)
+figure(5); clf; fullwidth(1)
 for i = 1:numel(pEst)
 	subplot(numel(pEst), 1, i)
 	cla;
@@ -201,14 +206,11 @@ xlabel('Time [s]');
 
 function window = updateWindow(prediction, W, transitionFcn)
 
-% 	t0 = find(t == 0);
 	window = zeros([size(prediction) W]);
-% 	fwd = numel(t) - t0;
-% 	bkwd = t0 - 1;
 
 	window(:, :, 1) = prediction;
 	for i = 2:W
-		window(:, :, i) = transitionFcn(window(:, :, i - 1));
+		window(:, :, i) = transitionFcn(window(:, :, i - 1), i*1000);
 	end
 		
 end
@@ -221,11 +223,9 @@ data = data(bound_inds, :);
 new_range = bounds(:, 3) .* range(bounds(:, 1:2), 2);
 bounds = mean(bounds(:, 1:2), 2) + new_range / 2 * [-1 1];
 bounds = bounds(bound_inds, 1:2);
-while any((data > bounds(:, 2)) + (data < bounds(:, 1)))
-	too_high = data > bounds(:, 2);
-	data(too_high) = 2 * bounds(any(too_high, 2), 2) - data(too_high);
-	too_low = data < bounds(:, 1);	
-	data(too_low) = 2 * bounds(any(too_low, 2), 1) - data(too_low);
+while any(any( (data > bounds(:, 2)) + (data < bounds(:, 1)) ))
+	data = bounds(:, 2) - abs(bounds(:, 2) - data);
+	data = bounds(:, 1) + abs(bounds(:, 1) - data);
 end
 bounded(bound_inds, :) = data;
 

@@ -1,6 +1,6 @@
 % sim
 
-noiseStd = [1 0 0 0]; % ... Measurment noise
+% noiseStd = [1 0 0 0]; % ... Measurment noise
 delta = 0.01; % integration step [ms]
 Vth = 30; % count spikes when voltage goes above Vth
 
@@ -25,9 +25,15 @@ params = [gB; EB; VBth; SB; tauB; I; mNoise];
 TOTAL_TIME = 1e3 * 1/delta; % time steps to simulate (ms * fs)
 states = [s0; params]; % initial states
 sim = zeros(numel(states), TOTAL_TIME); % to hold simulation results
-noise = [noiseStd(:) * mNoise; zeros(numel(params), 1)];
+% noise = [noiseStd(:) * mNoise; zeros(numel(params), 1)];
 
-[t, sim] = ode23(@HH_dynamics, [0 1e3], states); sim = sim';
+% [t, sim] = ode23(@HH_dynamics, [0 1e3], states); sim = sim';
+
+sim(:, 1) = states;
+for t = 2:TOTAL_TIME
+	sim(:, t) = HH_stateTrnsn(sim(:, t-1), t, delta, []);
+end
+t = (1:TOTAL_TIME) * delta;
 
 % for t = 1:TOTAL_TIME
 % 	dS = HH_dynamics(states); % dynamics
@@ -40,14 +46,15 @@ noise = [noiseStd(:) * mNoise; zeros(numel(params), 1)];
 %% Plot Results
 figure(99); fullwidth()
 ax = subplot(8,1,2:7);
-tt = (1:TOTAL_TIME) * delta;
-plot(tt, sim(1,:)); ylabel('Voltage [mV]'); xlabel('Time [ms]'); 
-hold on; plot([0 TOTAL_TIME] * delta,Vth *  [1 1], '--', 'color', .5 * [1 1 1]); hold off
+% tt = (1:TOTAL_TIME) * delta;
+plot(t, sim(1,:)); ylabel('Voltage [mV]'); xlabel('Time [ms]'); 
+hold on; plot([0 t(end)],Vth *  [1 1], '--', 'color', .5 * [1 1 1]); hold off
 spikes = [false logical((sim(1,1:end-1) < Vth) .* sim(1,2:end) > Vth)];
-hold on; plot(tt(spikes), sim(1,spikes), 'r*'); hold off;
+hold on; plot(t(spikes), sim(1,spikes), 'r*'); hold off;
 
 subplot(8,1,1);
 spiketimes = find(spikes);
-plot([spiketimes(:) spiketimes(:)]' * delta, [zeros(size(spiketimes(:))) ones(size(spiketimes(:)))]', 'color', lines(1))
+spikeT = t(spikes);
+plot([spikeT(:) spikeT(:)]', [zeros(size(spikeT(:))) ones(size(spikeT(:)))]', 'color', lines(1))
 xlim(get(ax, 'xlim'))
 yticks([]); xticks([]);

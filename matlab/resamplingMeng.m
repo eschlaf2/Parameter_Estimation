@@ -16,9 +16,9 @@ prior(end, :) = weights;
 
 cc = corrcoef(prior([inds(1:end-1); true], :)');
 if numel(unique(likelihood)) == 1
-	rho = 1;
+	rho = 1.1;
 else
-	rho = 1.01 - .06 * abs(cc(2:end, 1)); % discount factor
+	rho = .95 + .05 * abs(cc(2:end, 1)); % discount factor
 end
 
 
