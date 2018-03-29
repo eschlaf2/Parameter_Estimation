@@ -3,7 +3,7 @@
 model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
 N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
-PLOT = true;
+PLOT = false;
 
 %% Load firing times
 
@@ -87,7 +87,7 @@ paramDist = zeros(numel(pEst), 1e3, K, 'single'); % for holding (interpolated) p
 %% Run PF
 options = odeset('vectorized', 'on');
 step = 100;
-for k = 1:min(K, 1e3)		% for each observation
+for k = 1:min(K, 5e2)		% for each observation
 	
 	prediction = prior;
 	
@@ -135,6 +135,7 @@ for k = 1:min(K, 1e3)		% for each observation
 		xlim(stateBounds(x,1:2)); ylim(stateBounds(y,1:2));
 		colormap('cool'); caxis([0 2/N]); colorbar
 		title(sprintf('%1.2f: %d', tSpan(k) * 1e3, obsn(k)))
+		xlabel(paramNames{pEst(1)}); ylabel(paramNames{pEst(2)});
 		drawnow;
 		pause(1e-6)
 	end
