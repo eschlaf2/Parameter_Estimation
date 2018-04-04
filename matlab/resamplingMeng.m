@@ -16,11 +16,11 @@ prior(end, :) = weights;
 
 cc = corrcoef(prior([inds(1:end-1); true], :)');
 ll_dist = sort(histcounts(likelihood, 10), 'descend');
-% if ll_dist(1) / N > .98
-% 	rho = 1.1;
-% else
-rho = 1.02 - .06 * abs(cc(2:end, 1)); % discount factor
-% end
+if ll_dist(1) / N > .99
+	rho = 1.1;
+else
+	rho = .999 - .05 * abs(cc(2:end, 1)); % discount factor
+end
 
 
 % Draw new parameters
