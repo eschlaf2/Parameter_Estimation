@@ -88,7 +88,7 @@ paramDist = zeros(numel(pEst), 1e3, K, 'single'); % for holding (interpolated) p
 %% Run PF
 options = odeset('vectorized', 'on');
 step = 100;
-for k = 1:min(K, 1e3)		% for each observation
+for k = 1:min(K, 1e2)		% for each observation
 	
 	prediction = prior;
 	
