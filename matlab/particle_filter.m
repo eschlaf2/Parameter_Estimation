@@ -26,7 +26,7 @@ switch model
 		stateNames = {'V', 'n', 'h', 'B'};
 		paramNames = {'gB', 'EB', 'VBth', 'SB', 'tauB', 'I', 'mNoise'};
 		
-% 		measNoise = [1 0 0 0]; % bool indicating which states have measurement noise
+% 		measNoise = 1; % bool indicating which states have measurement noise
 		procNoise = 0.01; % std of process noise as proportion of range
 		dt = 0.01;	% integration step [ms]
 		
@@ -37,7 +37,7 @@ switch model
 		delta = 1; % binwidth [ms]
 
 		
-		transitionFcn = @(particles, t) HH_stateTrnsn(particles, t, dt, []);
+		transitionFcn = @(particles) HH_stateTrnsn(particles, [], dt, []);
 		likelihoodFcn = @(window, obsn) ...
 			likelihoodFcnMeng(window, obsn, W, Vth, delta);
 % 			likelihoodFcnMeng(window, obsn, t, Vth);
@@ -87,12 +87,12 @@ paramDist = zeros(numel(pEst), 1e3, K, 'single'); % for holding (interpolated) p
 %% Run PF
 options = odeset('vectorized', 'on');
 step = 100;
-for k = 1:min(K, 5e2)		% for each observation
+for k = 1:min(K, 1e3)		% for each observation
 	
 	prediction = prior;
 	
 	for i = 1:binwidth % for each integration step within a bin
-		prediction = transitionFcn(prediction, k);	% ... integrate states
+		prediction = transitionFcn(prediction);	% ... integrate states
 	end
 	
 % 	for p = 1:step:N
@@ -211,7 +211,7 @@ function window = updateWindow(prediction, W, transitionFcn)
 
 	window(:, :, 1) = prediction;
 	for i = 2:W
-		window(:, :, i) = transitionFcn(window(:, :, i - 1), i*1000);
+		window(:, :, i) = transitionFcn(window(:, :, i - 1));
 	end
 		
 end

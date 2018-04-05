@@ -15,13 +15,16 @@ b = h/10; % allowance
 N = size(window, 2); % number of particles
 
 window = squeeze(window(1, :, :))'; % Keep only the voltage of each particle
-crossings = sum(diff(window > Vth, 1) > 0);
+% crossings = sum(diff(window > Vth) > 0);
+crossings = any(window > Vth);
 
 % lambda = h * ones(1, N);	% Compute lambda_k of each particle
 % % lambda(window(1,:) >= Vth) = b;
 % lambda(all(window <= Vth)) = b;
 
-lambda = h * 1.1./(abs(crossings - observation) + 1);
+% lambda = h * 1.1./(abs(crossings - observation) + 1);
+lambda = h * ones(1, N);
+% lambda = h * (crossings == observation);
 lambda(crossings == 0) = b;
 % lambda = b * ones(1, N);
 % lambda(abs(crossings - observation) < 2) = h;

@@ -36,8 +36,7 @@ Vdot = (... % F1(V, n, h, B)
 	I - gK * n.^4 .* (V - EK) ... % drive current minus Potassium current
 	- gNa * mInf.^3 .* h .* (V - ENa) ... % Sodium current
 	- gB .* B .* (V - EB) ... % mystery current
-	- gL .* (V - EL)) / C ... % Leak
-	+ mNoise .* 100 * randn(); % Noise
+	- gL .* (V - EL)) / C; ... % Leak
 
 ndot = (nInf - n) ./ tauN; % F2(n)
 

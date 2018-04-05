@@ -31,7 +31,7 @@ sim = zeros(numel(states), TOTAL_TIME); % to hold simulation results
 
 sim(:, 1) = states;
 for t = 2:TOTAL_TIME
-	sim(:, t) = HH_stateTrnsn(sim(:, t-1), t, delta, []);
+	sim(:, t) = HH_stateTrnsn(sim(:, t-1), [], delta, []);
 end
 t = (1:TOTAL_TIME) * delta;
 
