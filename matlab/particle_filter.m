@@ -4,7 +4,7 @@ model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
 N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
 PLOT = false;
-PLOT_RESULTS = false;
+PLOT_RESULTS = true;
 
 %% Load firing times
 
@@ -205,7 +205,12 @@ if PLOT_RESULTS
     xlabel('Time [s]');
 end
 
-
+if exist('outfile', 'var')
+   save(outfile, 'sim', 'est')
+   print(5, [outfile '_5'], '-dpng')
+   print(7, [outfile '_7'], '-dpng')
+   print(99, [outfile '_sim'], '-dpng')
+end
 %% Supplementary functions
 
 function window = updateWindow(prediction, W, transitionFcn)

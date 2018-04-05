@@ -44,17 +44,19 @@ t = (1:TOTAL_TIME) * delta;
 % end
 
 %% Plot Results
-figure(99); fullwidth()
-ax = subplot(8,1,2:7);
-% tt = (1:TOTAL_TIME) * delta;
-plot(t, sim(1,:)); ylabel('Voltage [mV]'); xlabel('Time [ms]'); 
-hold on; plot([0 t(end)],Vth *  [1 1], '--', 'color', .5 * [1 1 1]); hold off
-spikes = [false logical((sim(1,1:end-1) < Vth) .* sim(1,2:end) > Vth)];
-hold on; plot(t(spikes), sim(1,spikes), 'r*'); hold off;
+if ~exist('PLOT_RESULTS', 'var') || PLOT_RESULTS
+    figure(99); fullwidth()
+    ax = subplot(8,1,2:7);
+    % tt = (1:TOTAL_TIME) * delta;
+    plot(t, sim(1,:)); ylabel('Voltage [mV]'); xlabel('Time [ms]'); 
+    hold on; plot([0 t(end)],Vth *  [1 1], '--', 'color', .5 * [1 1 1]); hold off
+    spikes = [false logical((sim(1,1:end-1) < Vth) .* sim(1,2:end) > Vth)];
+    hold on; plot(t(spikes), sim(1,spikes), 'r*'); hold off;
 
-subplot(8,1,1);
-spiketimes = find(spikes);
-spikeT = t(spikes);
-plot([spikeT(:) spikeT(:)]', [zeros(size(spikeT(:))) ones(size(spikeT(:)))]', 'color', lines(1))
-xlim(get(ax, 'xlim'))
-yticks([]); xticks([]);
+    subplot(8,1,1);
+    spiketimes = find(spikes);
+    spikeT = t(spikes);
+    plot([spikeT(:) spikeT(:)]', [zeros(size(spikeT(:))) ones(size(spikeT(:)))]', 'color', lines(1))
+    xlim(get(ax, 'xlim'))
+    yticks([]); xticks([]);
+end
