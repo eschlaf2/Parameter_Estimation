@@ -2,9 +2,10 @@
 
 model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
-N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
+N = 1e4; % number of particles; Meng used 1e4, but start at 1e3 for speed
 PLOT = false;
 PLOT_RESULTS = true;
+K_MAX = 1e3;
 
 %% Load firing times
 
@@ -88,7 +89,7 @@ paramDist = zeros(numel(pEst), 1e3, K, 'single'); % for holding (interpolated) p
 %% Run PF
 options = odeset('vectorized', 'on');
 step = 100;
-for k = 1:min(K, 1e2)		% for each observation
+for k = 1:min(K, K_MAX)		% for each observation
 	
 	prediction = prior;
 	
@@ -206,7 +207,7 @@ if PLOT_RESULTS
 end
 
 if exist('outfile', 'var')
-   save(outfile, 'sim', 'est')
+   save(outfile, 'sim', 'estimates')
    print(5, [outfile '_5'], '-dpng')
    print(7, [outfile '_7'], '-dpng')
    print(99, [outfile '_sim'], '-dpng')
