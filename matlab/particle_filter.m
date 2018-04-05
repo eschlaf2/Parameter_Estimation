@@ -4,6 +4,7 @@ model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
 N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
 PLOT = false;
+PLOT_RESULTS = false;
 
 %% Load firing times
 
@@ -142,65 +143,67 @@ for k = 1:min(K, 1e3)		% for each observation
 end
 
 %% Plot results
-colors = lines(7);
-k = k-1;
+if PLOT_RESULTS
+    colors = lines(7);
+    k = k-1;
 
-figure(3); fullwidth()
-stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
-plot(tSpan(1:k), estimates(1, 1:k)/Vth, 'Color', colors(2,:));
-plot(tSpan(1:k), sim(1, 1:binwidth:k*binwidth)/Vth, 'Color', colors(1,:))
-plot(tSpan(1:k), ones(1, k), '--', 'Color', .5*[1 1 1]); hold off;
-ylim(1.1*(get(gca,'YLim') - mean(get(gca, 'Ylim'))) + mean(get(gca, 'YLim')));
-legend('Spikes','Estimated Voltage', 'True Voltage', 'location', 'best');
-xlabel('Time [s]'); ylabel('Voltage [mV]');
-title('Voltage')
+    figure(3); fullwidth()
+    stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
+    plot(tSpan(1:k), estimates(1, 1:k)/Vth, 'Color', colors(2,:));
+    plot(tSpan(1:k), sim(1, 1:binwidth:k*binwidth)/Vth, 'Color', colors(1,:))
+    plot(tSpan(1:k), ones(1, k), '--', 'Color', .5*[1 1 1]); hold off;
+    ylim(1.1*(get(gca,'YLim') - mean(get(gca, 'Ylim'))) + mean(get(gca, 'YLim')));
+    legend('Spikes','Estimated Voltage', 'True Voltage', 'location', 'best');
+    xlabel('Time [s]'); ylabel('Voltage [mV]');
+    title('Voltage')
 
-figure(4); fullwidth()
-plot((tSpan(1:k) .* ones(3, k))', estimates(2:4, 1:k)', 'linewidth', 2); 
-legend(stateNames(2:4))
-hold on; set(gca, 'ColorOrderIndex', 1)
-plot((tSpan(1:k) .* ones(3, k))', sim(2:4, 1:binwidth:k*binwidth)', ':', 'linewidth', 2); hold off;
-xlabel('Time [s]');
-title('Hidden States')
+    figure(4); fullwidth()
+    plot((tSpan(1:k) .* ones(3, k))', estimates(2:4, 1:k)', 'linewidth', 2); 
+    legend(stateNames(2:4))
+    hold on; set(gca, 'ColorOrderIndex', 1)
+    plot((tSpan(1:k) .* ones(3, k))', sim(2:4, 1:binwidth:k*binwidth)', ':', 'linewidth', 2); hold off;
+    xlabel('Time [s]');
+    title('Hidden States')
 
-figure(5); clf; fullwidth(1)
-for i = 1:numel(pEst)
-	subplot(numel(pEst), 1, i)
-	cla;
-	shapeX = tSpan([1:k, k:-1:1]);
-	shapeY = [ci(NUM_STATES + pEst(i), 1:k, 1), ci(NUM_STATES + pEst(i), k:-1:1, 2)];
-	patch(shapeX, shapeY, 'b', 'FaceColor', colors(i,:), 'facealpha', .3, ...
-		'edgecolor', 'none', 'displayname', '95CI');
-	hold on;
-	plot(tSpan(1:k), estimates(NUM_STATES + pEst(i), 1:k), 'linewidth', 2, ...
-		'displayname', sprintf('%s Est', paramNames{pEst(i)}), ...
-		'Color', colors(i, :)); 
-	plot(tSpan(1:k), sim(NUM_STATES + pEst(i), 1:binwidth:k*binwidth)', '--', ...
-		'displayname', sprintf('%s True', paramNames{pEst(i)}), ...
-		'Color', colors(i, :)); 
-	hold off;
-	legend();
-	title(['Estimated ' paramNames{pEst(i)}])
-	axis('tight')
+    figure(5); clf; fullwidth(1)
+    for i = 1:numel(pEst)
+        subplot(numel(pEst), 1, i)
+        cla;
+        shapeX = tSpan([1:k, k:-1:1]);
+        shapeY = [ci(NUM_STATES + pEst(i), 1:k, 1), ci(NUM_STATES + pEst(i), k:-1:1, 2)];
+        patch(shapeX, shapeY, 'b', 'FaceColor', colors(i,:), 'facealpha', .3, ...
+            'edgecolor', 'none', 'displayname', '95CI');
+        hold on;
+        plot(tSpan(1:k), estimates(NUM_STATES + pEst(i), 1:k), 'linewidth', 2, ...
+            'displayname', sprintf('%s Est', paramNames{pEst(i)}), ...
+            'Color', colors(i, :)); 
+        plot(tSpan(1:k), sim(NUM_STATES + pEst(i), 1:binwidth:k*binwidth)', '--', ...
+            'displayname', sprintf('%s True', paramNames{pEst(i)}), ...
+            'Color', colors(i, :)); 
+        hold off;
+        legend();
+        title(['Estimated ' paramNames{pEst(i)}])
+        axis('tight')
+    end
+    xlabel('Time [s]');
+
+
+    figure(6); fullwidth()
+    plot(estimates(end, 1:k)); title('Mean Likelihood');
+
+    figure(7); fullwidth(numel(pEst) > 1)
+    for i = 1:numel(pEst)
+        subplot(numel(pEst), 1, i)
+        contourf(tSpan(1:k-1), paramDistX(i, :), squeeze(paramDist(i, :, 1:k-1)), 'linestyle', 'none')
+        caxis([0 2/N]); % colormap('gray')
+        colorbar()
+        hold on; 
+        plot(tSpan(1:k)', sim(NUM_STATES + pEst(i), 1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
+        hold off; 
+        title([paramNames{pEst(i)} ' Estimate'])
+    end
+    xlabel('Time [s]');
 end
-xlabel('Time [s]');
-
-
-figure(6); fullwidth()
-plot(estimates(end, 1:k)); title('Mean Likelihood');
-
-figure(7); fullwidth(numel(pEst) > 1)
-for i = 1:numel(pEst)
-	subplot(numel(pEst), 1, i)
-	contourf(tSpan(1:k-1), paramDistX(i, :), squeeze(paramDist(i, :, 1:k-1)), 'linestyle', 'none')
-	caxis([0 2/N]); % colormap('gray')
-	colorbar()
-	hold on; 
-	plot(tSpan(1:k)', sim(NUM_STATES + pEst(i), 1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
-	hold off; 
-	title([paramNames{pEst(i)} ' Estimate'])
-end
-xlabel('Time [s]');
 
 
 %% Supplementary functions
