@@ -2,10 +2,10 @@
 
 model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
-N = 1e4; % number of particles; Meng used 1e4, but start at 1e3 for speed
+N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
 PLOT = false;
 PLOT_RESULTS = true;
-K_MAX = 1e3;
+K_MAX = 5e2;
 
 %% Load firing times
 
@@ -34,16 +34,16 @@ switch model
 		
 		W = 3;	% window (ms)
 		Vth = 30; % Voltage threshold [mV]
-% 		t = ((1:W) - ceil(W/2)) * dt; % time [ms]
+% 		t = ((dt:dt:W) - W/2); % time [ms]
 		
 		delta = 1; % binwidth [ms]
 
 		
 		transitionFcn = @(particles) HH_stateTrnsn(particles, [], dt, []);
 		likelihoodFcn = @(window, obsn) ...
-			likelihoodFcnMeng(window, obsn, W, Vth, delta);
-% 			likelihoodFcnMeng(window, obsn, t, Vth);
-% 		likelihoodFcn = @(particles, obsn) normpdf(obsn - particles(1,:), 0, 1) + 1e-6; 
+			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
+% 			likelihoodFcnMeng2011(window, obsn, t, Vth);
+			
 		resamplingFcn = @resamplingMeng;
 		
 		[s0, stateBounds] = HH_stateBounds(); % get initial conditions and parameter bounds
@@ -97,11 +97,6 @@ for k = 1:min(K, K_MAX)		% for each observation
 		prediction = transitionFcn(prediction);	% ... integrate states
 	end
 	
-% 	for p = 1:step:N
-% 		[~, temp] = ode23t(@HH_dynamics, [0 delta], prior(:, p:p+step-1), options);
-% 		prediction(:, p:p+step-1) = reshape(temp(end, :), NUM_ALL, []);
-% 	end
-
 	% Update window of V surrounding t_k
 	window = updateWindow(prediction, W*binwidth, transitionFcn);
 	
