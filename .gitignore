@@ -104,3 +104,4 @@ ENV/
 ._*
 *.m~
 mbatch.sh.*
+*.icloud
