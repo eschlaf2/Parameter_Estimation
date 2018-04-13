@@ -5,7 +5,7 @@ SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
 N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
 PLOT = false;
 PLOT_RESULTS = true;
-K_MAX = 5e2;
+K_MAX = 1e3;
 
 %% Load firing times
 
