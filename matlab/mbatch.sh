@@ -1,3 +1,6 @@
 #!/bin/bash
 
-matlab -nodisplay -singleCompThread -r "outfile = '/project/ecog/emily/PF/$1_$SGE_TASK_ID', particle_filter, save(outfile, sim, estimates), exit"
+outfile=/project/ecog/emily/PF/$JOB_ID
+if ! [ -x $outfile ]; then mkdir $outfile; fi
+matlab -nodisplay -singleCompThread -r "outfile = '$outfile/$SGE_TASK_ID', particle_filter, exit"
+
