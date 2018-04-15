@@ -1,18 +1,29 @@
-function F = HH_dynamics(~, state)
+function F = HH_dynamics(~, stateMat, paramStruct)
+% state should be a matrix
 
-V = state(1, :);
-n = state(2, :);
-h = state(3, :);
-B = state(4, :);
-gB = state(5, :);
-EB = state(6, :);
-VBth = state(7, :);
-SB = state(8, :);
-tauB = state(9, :);
-I = state(10, :);
-mNoise = state(11, :);
+%% Default parameter values
+C = 0.9;
+ENa = 50;
+EL = -70;
+gNa = 100;
+gL = 0.25;
+gB = 3.5;
+EB = -74.8;
+VBth = -2.2;
+SB = 9.6;
+tauB = 64;
+I = 2;
+EK = -95;
+gK = 7;
 
-F = zeros(size(state));
+%% Parse input
+V = stateMat(1, :);
+n = stateMat(2, :);
+h = stateMat(3, :);
+B = stateMat(4, :);
+
+fn = fieldnames(paramStruct);
+eval(sprintf('%s = paramStruct.%s;\n', fn{:}, fn{:}))
 
 %% Set parameters
 
@@ -23,13 +34,6 @@ tauN = 0.25 + 4.35*exp(-abs(V+10)/10);
 tauH = 0.15 + 1.15./(1 + exp((V+33.5)/15));
 BInf = 1./(1 + exp(-(V-VBth)./SB));
 % tauB = tauB;
-C = 0.9;
-EK = -95;
-ENa = 50;
-EL = -70;
-gNa = 100;
-gK = 7;
-gL = 0.25;
 
 %% Calculate changes
 Vdot = (... % F1(V, n, h, B)
@@ -44,6 +48,6 @@ hdot = (hInf - h) ./ tauH; % F3(h)
 
 Bdot = (BInf - B) ./ tauB; % F4(B)
 
-F(1:4, :) = [Vdot; ndot; hdot; Bdot]; % state change
+F = [Vdot; ndot; hdot; Bdot]; % state change
 
 end

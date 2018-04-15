@@ -1,4 +1,4 @@
-function [s0, stateBounds] = HH_stateBounds()
+function [s0, boundsStruct] = HH_stateBounds()
 % STATES = (V, n, h, B, gB, EB, VBth, SB, tauB, I) 
 
 s0 = [	-71;	... % V
@@ -13,15 +13,29 @@ s0 = [	-71;	... % V
 % SB = 9.6;
 % tauB = 64;
 % I = 2;
+% EK = -95;
+% gK = 7;
 
-stateBounds = [	3.5,	3.5,	1;	...	% gB
-				-90,	-60,	1;	...	% EB
-				-5,	0,	1;	...	% VBth
-				5,	15,		1;	... % SB
-				64,		64,		1;	... % tauB
-				0,		5,		1;	... % I
-				0.,		.5,		1;	... % mNoise
-				];
+
+paramBounds = {...
+% 				'gB',	[3.5,	3.5,	1];	...
+				'EB',	[-90,	-60,	1];	...	
+				'VBth', [-5,	0,		1];	...
+				'SB',	[5,		15,		1];	...
+% 				'tauB', [64,	64,		1];	...
+				'I',	[0,		5,		1];	...
+				'mNoise', [0.,	.5,		1];	... 
+% 				'EK',	[-95,	-95,	1]; ...
+% 				'gK',	[7,		7,		1]; ...
+				};
+
+boundsStruct = cell2struct(paramBounds(:, 2), paramBounds(:, 1));
+
+% for i = 1:length(paramBounds)
+% 	if range(paramBounds{i, 2}(1:2)) > 0
+% 		boundsStruct.(paramBounds{i, 1}) = paramBounds{i, 2};
+% 	end
+% end
 
 end
 

@@ -1,4 +1,4 @@
-function [posterior, inds] = resamplingMeng(prior, likelihood, trigger, noiseStd)
+function [posterior, inds] = resamplingMeng(particles, likelihood, trigger)
 % See Meng, et al., 2014
 % At every spike time do a residual sampling scheme.
 %	Retain M = nw copies of each particle and then supplement missing
@@ -6,15 +6,15 @@ function [posterior, inds] = resamplingMeng(prior, likelihood, trigger, noiseStd
 %	probability proportional to nw - M residuals
 % Otherwise bootstrap
 
-N = size(prior, 2); % number of particles
-inds = noiseStd > 0;
+N = length(particles.weights);
 
 % Update weights
-weights = prior(end, :) .* likelihood + 1e-6;
+weights = particles.weights .* likelihood + 1e-6;
 weights = weights/sum(weights);
-prior(end, :) = weights;
+particles.weights = weights;
 
-cc = corrcoef(prior([inds(1:end-1); true], :)');
+idx = @(A, ind) A(ind);
+cc = structfun(@(x) idx(corrcoef(x, weights), 3), particles.params);
 ll_dist = sort(histcounts(likelihood, 10), 'descend');
 if ll_dist(1) / N > .98
 	rho = 1.1;
@@ -24,17 +24,18 @@ end
 
 
 % Draw new parameters
-theta = prior(noiseStd > 0, :);
-m = rho .* theta + (1 - rho) .* sum(weights .* theta, 2);
+m = @(theta) rho .* theta + (1 - rho) .* sum(weights .* theta, 2);
 h2 = 1 - rho.^2;
-sigma = std(theta, [], 2);
-noiseStd(noiseStd > 0) = max(h2 .* sigma, noiseStd(noiseStd > 0));
-prior(noiseStd > 0, :) = m;
+sigma = structfun(@std, particles);
+% noiseStd(noiseStd > 0) = max(h2 .* sigma, noiseStd(noiseStd > 0));
+particles.params = structfun(m, particles.params, 'Uni', 0);
+particles.weights = weights;
+particles.pNoise = max(h2 .* sigma, particles.pNoise);
 
 % Resample if triggered ...
 if trigger
-	M = floor(N * weights);	% copies
-	p = mod(N * weights, 1);	% residuals
+	M = floor(N * weights);	 % copies
+	p = mod(N * weights, 1);  % residuals
 	
 	% get M(i) copies of particle i
 	inds = zeros(1, sum(M));
@@ -50,7 +51,7 @@ if trigger
 	r = rand(1, N - sum(M));
 	newParts = floor(interp1(cumsum(p), 1:N, r, 'linear', 0)) + 1;
 	inds = [inds, newParts];
-	prior(end,:) = 1/N;
+	particles(end,:) = 1/N;
 	
 else % bootstrap
 	try 
@@ -62,9 +63,18 @@ else % bootstrap
 end
 
 
-posterior = prior(:, inds) + ... % get new particles
-	noiseStd .* randn(size(prior)); % add jitter
-posterior(end, :) = posterior(end, :) / sum(posterior(end, :));
+% posterior = particles(:, inds) + ... % get new particles
+% 	noiseStd .* randn(size(particles)); % add jitter
+% posterior(end, :) = posterior(end, :) / sum(posterior(end, :));
+
+posterior = particles;
+posterior.params = structfun(@(x) x(inds), particles.params, 'Uni', 0);
+fn = fieldnames(posterior.params);
+for i = 1:length(posterior.params)
+	posterior.params.(fn{i}) = posterior.params.(fn{i}) + ...
+		posterior.pNoise(i) * randn(1, N);
+end
+posterior.weights = posterior.weights(inds) / sum(posterior.weights(inds));
 
 end
 
