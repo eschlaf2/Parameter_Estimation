@@ -9,7 +9,8 @@ big_slopes = max(abs(dF)) > 5000;
 if any(big_slopes)
 	options = odeset('InitialStep', delta/5);
 	for p = find(big_slopes)
-		[~, temp] = ode45(@(t, y) HH_dynamics(t, y, paramStruct), ...
+		subset = structfun(@(x) x(p), paramStruct, 'uni', 0);
+		[~, temp] = ode45(@(t, y) HH_dynamics(t, y, subset), ...
 			[0 delta], stateMat(:, p), options);
 		dF(:, p) = temp(end, :)' - stateMat(:, p);
 	end

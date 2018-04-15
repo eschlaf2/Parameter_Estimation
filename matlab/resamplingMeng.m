@@ -7,6 +7,7 @@ function [posterior, inds] = resamplingMeng(particles, likelihood, trigger)
 % Otherwise bootstrap
 
 N = length(particles.weights);
+fn = fieldnames(particles.params);
 
 % Update weights
 weights = particles.weights .* likelihood + 1e-6;
@@ -17,18 +18,21 @@ idx = @(A, ind) A(ind);
 cc = structfun(@(x) idx(corrcoef(x, weights), 3), particles.params);
 ll_dist = sort(histcounts(likelihood, 10), 'descend');
 if ll_dist(1) / N > .98
-	rho = 1.1;
+	rho = 1.1 * ones(size(cc));
 else
-	rho = 1.01 - .05 * abs(cc(2:end, 1)); % discount factor
+	rho = 1.01 - .05 * abs(cc); % discount factor
 end
 
 
 % Draw new parameters
-m = @(theta) rho .* theta + (1 - rho) .* sum(weights .* theta);
+m = @(theta, rho) rho .* theta + (1 - rho) .* sum(weights .* theta);
 h2 = 1 - rho.^2;
-sigma = structfun(@std, particles);
+sigma = structfun(@std, particles.params);
 % noiseStd(noiseStd > 0) = max(h2 .* sigma, noiseStd(noiseStd > 0));
-particles.params = structfun(m, particles.params, 'Uni', 0);
+for i = 1:length(fn)
+	particles.params.(fn{i}) = m(particles.params.(fn{i}), rho(i));
+end
+% particles.params = structfun(m, particles.params, 'Uni', 0);
 particles.weights = weights;
 particles.pNoise = max(h2 .* sigma, particles.pNoise);
 
@@ -65,7 +69,7 @@ end
 posterior = particles;
 posterior.params = structfun(@(x) x(inds), particles.params, 'Uni', 0);
 fn = fieldnames(posterior.params);
-for i = 1:length(posterior.params)
+for i = 1:length(fn)
 	posterior.params.(fn{i}) = posterior.params.(fn{i}) + ...
 		posterior.pNoise(i) * randn(1, N);
 end

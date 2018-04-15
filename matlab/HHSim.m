@@ -10,7 +10,9 @@ n = 0.0147;
 h = 0.7497;
 B = 0.0326;
 
-EB = linspace(-90, -60, TOTAL_TIME);
+simParams = structfun(@(x) x * ones(1, TOTAL_TIME, 'single'), default_HH_params(), 'Uni', 0);
+simParams.EB = linspace(-90, -60, TOTAL_TIME);
+
 
 s0 = [V; n; h; B];
 
@@ -20,8 +22,8 @@ sim = zeros(numel(s0), TOTAL_TIME); % to hold simulation results
 
 sim(:, 1) = s0;
 for t = 2:TOTAL_TIME
-	simParams.EB = EB(t-1);
-	sim(:, t) = HH_stateTrnsn(sim(:, t-1), simParams, delta);
+	p = structfun(@(x) x(t - 1), simParams, 'Uni', 0);
+	sim(:, t) = HH_stateTrnsn(sim(:, t-1), p, delta);
 end
 t = (1:TOTAL_TIME) * delta;
 

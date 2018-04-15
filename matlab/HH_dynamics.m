@@ -15,7 +15,6 @@ p.tauB = 64;
 p.I = 2;
 p.EK = -95;
 p.gK = 7;
-p.mNoise = 0.1;
 
 %% Parse input
 V = stateMat(1, :);
@@ -50,6 +49,10 @@ hdot = (hInf - h) ./ tauH; % F3(h)
 
 Bdot = (BInf - B) ./ tauB; % F4(B)
 
-F = [Vdot; ndot; hdot; Bdot]; % state change
+try 
+	F = [Vdot; ndot; hdot; Bdot]; % state change
+catch ME
+	disp('bug')
+end
 
 end
