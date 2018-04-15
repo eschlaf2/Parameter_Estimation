@@ -31,12 +31,6 @@ paramBounds = {...
 
 boundsStruct = cell2struct(paramBounds(:, 2), paramBounds(:, 1));
 
-% for i = 1:length(paramBounds)
-% 	if range(paramBounds{i, 2}(1:2)) > 0
-% 		boundsStruct.(paramBounds{i, 1}) = paramBounds{i, 2};
-% 	end
-% end
-
 end
 
 % stateBounds = [	0,		10,		1;	...	% gB

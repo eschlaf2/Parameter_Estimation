@@ -24,7 +24,7 @@ end
 
 
 % Draw new parameters
-m = @(theta) rho .* theta + (1 - rho) .* sum(weights .* theta, 2);
+m = @(theta) rho .* theta + (1 - rho) .* sum(weights .* theta);
 h2 = 1 - rho.^2;
 sigma = structfun(@std, particles);
 % noiseStd(noiseStd > 0) = max(h2 .* sigma, noiseStd(noiseStd > 0));
@@ -61,11 +61,6 @@ else % bootstrap
 		warning('error')
 	end
 end
-
-
-% posterior = particles(:, inds) + ... % get new particles
-% 	noiseStd .* randn(size(particles)); % add jitter
-% posterior(end, :) = posterior(end, :) / sum(posterior(end, :));
 
 posterior = particles;
 posterior.params = structfun(@(x) x(inds), particles.params, 'Uni', 0);

@@ -39,7 +39,7 @@ switch model
 		delta = 1; % binwidth [ms]
 
 		
-		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, [], dt);
+		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt);
 		likelihoodFcn = @(window, obsn) ...
 			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
 % 			likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);
@@ -85,8 +85,7 @@ particles.pNoise = structfun(@(x) procNoise .* range(x(1:2)), boundsStruct); % n
 
 % paramDistX = cell2mat(arrayfun(@(i) linspace(boundsStruct(i, 1), boundsStruct(i, 2), 1e3), pEst, ...
 % 	'UniformOutput', false));
-paramDist = particles.params;
-paramDist = structfun(@(x) zeros(1e3, K, 'single'), paramDist); % for holding (interpolated) posteriors
+paramDist = structfun(@(x) zeros(1e3, K, 'single'), boundsStruct); % for holding (interpolated) posteriors
 
 paramDistX = structfun(@(x) linspace(x(1), x(2), 1e3), boundsStruct, ...
 	'UniformOutput', false);
@@ -108,8 +107,14 @@ for k = 1:min(K, K_MAX)		% for each observation
 % 	[posterior, inds] = resamplingFcn(particles, probability, obsn(k)); % ... resample particles
 	[posterior, inds] = resamplingFcn(particles, probability, 0); % ... resample particles
 	
-	posterior = keep_in_bounds(posterior.params, boundsStruct);
 	
+	posterior.params = keep_in_bounds(posterior.params, boundsStruct);
+	
+	for f = fn
+		temp = paramDist.(f);
+% 		temp(:, k) = structfun(@(x) interp1(x, posterior.weights, 
+		paramDist.(f) = temp;
+	end
 	for p = 1:numel(pEst)
 		paramDist(p, :, k) = ...
 			interp1(posterior(NUM_STATES+pEst(p), :), posterior(end,:), paramDistX(p, :), 'linear', 0); % ... save distribution

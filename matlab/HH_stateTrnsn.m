@@ -1,4 +1,4 @@
-function stateMat = HH_stateTrnsn(stateMat, paramStruct)
+function stateMat = HH_stateTrnsn(stateMat, paramStruct, delta)
 % Euler integration with noise
 
 %% Set parameters
