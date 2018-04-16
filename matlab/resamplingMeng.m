@@ -55,7 +55,7 @@ if trigger
 	r = rand(1, N - sum(M));
 	newParts = floor(interp1(cumsum(p), 1:N, r, 'linear', 0)) + 1;
 	inds = [inds, newParts];
-	particles(end,:) = 1/N;
+	particles.weights = 1/N * ones(1, N);
 	
 else % bootstrap
 	try 
@@ -70,10 +70,12 @@ posterior = particles;
 posterior.params = structfun(@(x) x(inds), particles.params, 'Uni', 0);
 fn = fieldnames(posterior.params);
 for i = 1:length(fn)
-	posterior.params.(fn{i}) = posterior.params.(fn{i}) + ...
+	f = fn{i};
+	posterior.params.(f) = posterior.params.(f) + ...
 		posterior.pNoise(i) * randn(1, N);
 end
 posterior.weights = posterior.weights(inds) / sum(posterior.weights(inds));
+posterior.states = posterior.states(:, inds);
 
 end
 

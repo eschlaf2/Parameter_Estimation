@@ -38,8 +38,8 @@ tauB = p.tauB;
 
 %% Calculate changes
 Vdot = (... % F1(V, n, h, B)
-	p.I - p.gK * n.^4 .* (V - p.EK) ... % drive current minus Potassium current
-	- p.gNa * mInf.^3 .* h .* (V - p.ENa) ... % Sodium current
+	p.I - p.gK .* n.^4 .* (V - p.EK) ... % drive current minus Potassium current
+	- p.gNa .* mInf.^3 .* h .* (V - p.ENa) ... % Sodium current
 	- p.gB .* B .* (V - p.EB) ... % mystery current
 	- p.gL .* (V - p.EL)) / p.C; ... % Leak
 

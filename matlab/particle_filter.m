@@ -2,10 +2,10 @@
 
 model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
-N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
+N = 1e4; % number of particles; Meng used 1e4, but start at 1e3 for speed
 PLOT = false;
 PLOT_RESULTS = true;
-K_MAX = 1e2;
+K_MAX = 1e3;
 
 %% Load firing times
 
@@ -39,7 +39,6 @@ switch model
 		Vth = 30; % Voltage threshold [mV]
 		
 		delta = 1; % binwidth [ms]
-
 		
 		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt);
 		likelihoodFcn = @(window, obsn) ...
@@ -106,6 +105,7 @@ for k = 1:min(K, K_MAX)		% for each observation
 	
 	% Update window of V surrounding t_k
 	window = updateWindow(prediction, W*binwidth, @(s) transitionFcn(s, particles.params));
+	particles.states = prediction;
 	
 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
 % 	[posterior, inds] = resamplingFcn(particles, probability, obsn(k)); % ... resample particles
@@ -115,7 +115,7 @@ for k = 1:min(K, K_MAX)		% for each observation
 	particles.params = keep_in_bounds(particles.params, boundsStruct);
 	weighted_mean = @(x) sum(x .* particles.weights, 2);
 	estimates.states(:, k) = weighted_mean(particles.states);
-	estimates.weights(k) = mean(particles.weights); 
+	estimates.weights(k) = mean(probability); 
 	temp = structfun(@sort, particles.params, 'uni', 0);
 	
 	for f = fn
@@ -128,30 +128,25 @@ for k = 1:min(K, K_MAX)		% for each observation
 		estimates.params.(f)(k) = weighted_mean(particles.params.(f));
 		
 		% Store the CIs
-		
 		estimates.ci.(f)(k, :) = temp.(f)(:, [floor(N*0.025) ceil(N*0.975)]);
 		
 	end
-% 	for p = 1:numel(pEst)
-% 		paramDist(p, :, k) = ...
-% 			interp1(posterior(NUM_STATES+pEst(p), :), posterior(end,:), paramDistX(p, :), 'linear', 0); % ... save distribution
-% 	end	
-	
-	if k == 10
-		disp('look around')
+
+	if ~mod(k, 10)
+		disp(['k = ' num2str(k)])
 	end
 	
 	if PLOT && ~mod(k, 5)
 		figure(999)
-		x = pEst(1); y = pEst(2);
+		x = fn{1}; y = fn{2};
 		inds = randsample(N, 100);
-		scatter(particles(NUM_STATES + x, inds), particles(NUM_STATES + y, inds), 16, particles(end, inds), 'filled');
-		hold on; plot(sim(x + NUM_STATES, k * binwidth), sim(y + NUM_STATES, k*binwidth), 'r*'); hold off;
-		hold on; plot(estimates(x + NUM_STATES, k), estimates(y + NUM_STATES, k), 'b*'); hold off;
-		xlim(boundsStruct(x,1:2)); ylim(boundsStruct(y,1:2));
+		scatter(particles.params.(x)(inds), particles.params.(y)(inds), 16, particles.weights(inds), 'filled');
+		hold on; plot(simParams.(x)(k * binwidth), simParams.(y)(k*binwidth), 'r*'); hold off;
+		hold on; plot(estimates.params.(x)(k), estimates.params.(y)(k), 'b*'); hold off;
+		xlim(boundsStruct.(x)(1:2)); ylim(boundsStruct.(y)(1:2));
 		colormap('cool'); caxis([0 2/N]); colorbar
 		title(sprintf('%1.2f: %d', tSpan(k) * 1e3, obsn(k)))
-		xlabel(paramNames{pEst(1)}); ylabel(paramNames{pEst(2)});
+		xlabel(x); ylabel(y);
 		drawnow;
 		pause(1e-6)
 	end
@@ -205,7 +200,7 @@ if PLOT_RESULTS
 
 
     figure(6); fullwidth()
-%     plot(estimates.weights(1:k)); title('Mean Likelihood');
+    plot(estimates.weights(1:k)); title('Mean Likelihood');
 
     figure(7); fullwidth(numel(fn) > 1)
     for i = 1:numel(fn)
