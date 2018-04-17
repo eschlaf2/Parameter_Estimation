@@ -16,6 +16,9 @@ switch SPIKETIMES
 		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
 		fs = 3e4;	% sampling frequency [Hz]
 	case 'sim'
+		load sim.mat
+		fs = 1e5;
+	case 'new_sim'
 		HHSim;
 		fs = 1e5;
 end
@@ -87,8 +90,7 @@ paramDist = zeros(numel(pEst), 1e3, K, 'single'); % for holding (interpolated) p
 
 
 %% Run PF
-options = odeset('vectorized', 'on');
-step = 100;
+
 for k = 1:min(K, K_MAX)		% for each observation
 	
 	prediction = prior;
@@ -118,8 +120,8 @@ for k = 1:min(K, K_MAX)		% for each observation
 
 	prior = posterior; % ... get the next prior 
 	
-	if k == 100
-		disp('look around')
+	if ~mod(k, 10)
+		disp(['k = ' num2str(k)])
 	end
 	
 	if PLOT && ~mod(k, 5)
