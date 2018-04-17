@@ -15,11 +15,11 @@ weights = weights/sum(weights);
 prior(end, :) = weights;
 
 cc = corrcoef(prior([inds(1:end-1); true], :)');
-ll_dist = sort(histcounts(likelihood, 10), 'descend');
+ll_dist = sort(histcounts(weights, 10), 'descend');
 if ll_dist(1) / N > .98
 	rho = 1.1;
 else
-	rho = 1.01 - .05 * abs(cc(2:end, 1)); % discount factor
+	rho = 1.01 - .05 * abs(cc(1:end-1, end)); % discount factor
 end
 
 
@@ -32,7 +32,7 @@ noiseStd(noiseStd > 0) = max(h2 .* sigma, noiseStd(noiseStd > 0));
 prior(noiseStd > 0, :) = m;
 
 % Resample if triggered ...
-if trigger
+if 0 % trigger
 	M = floor(N * weights);	% copies
 	p = mod(N * weights, 1);	% residuals
 	

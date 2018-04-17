@@ -1,7 +1,7 @@
 %% Set parameters
 
 model = 'HH';	% select which model to use
-SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
+SPIKETIMES = 'new_sim'; % simulate ('sim') or 'load' spike times
 N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
 PLOT = false;
 PLOT_RESULTS = true;
@@ -103,7 +103,7 @@ for k = 1:min(K, K_MAX)		% for each observation
 	window = updateWindow(prediction, W*binwidth, transitionFcn);
 	
 	likelihood = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
-	[posterior, ~] = resamplingFcn(prediction, likelihood, 0, pNoise); % ... resample particles
+	[posterior, ~] = resamplingFcn(prediction, likelihood, obsn(k), pNoise); % ... resample particles
 	
 	posterior(NUM_STATES + 1 : end, :) = ...
 		keep_in_bounds(posterior(NUM_STATES + 1 : end, :), stateBounds);
