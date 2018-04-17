@@ -68,7 +68,6 @@ end
 
 posterior = particles;
 posterior.params = structfun(@(x) x(inds), particles.params, 'Uni', 0);
-fn = fieldnames(posterior.params);
 for i = 1:length(fn)
 	f = fn{i};
 	posterior.params.(f) = posterior.params.(f) + ...
