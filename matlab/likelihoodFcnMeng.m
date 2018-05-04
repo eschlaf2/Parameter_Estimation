@@ -22,12 +22,14 @@ crossings = sum(diff(window > Vth) > 0);
 % % lambda(window(1,:) >= Vth) = b;
 % lambda(all(window <= Vth)) = b;
 
-lambda = h * 1.1./(abs(crossings - observation) + 1);
+lambda = h * 1./(10 * abs(crossings - observation) + 1);
 % lambda = h * ones(1, N);
 % lambda = h * (crossings == observation);
-lambda(crossings == 0) = b;
+% if ~observation
+% 	lambda(crossings == 0) = b;
+% end
 % lambda = b * ones(1, N);
 % lambda(abs(crossings - observation) < 2) = h;
 
-likelihood = exp(observation * log(lambda*delta) - lambda*delta);
+likelihood = exp(observation * log(lambda*delta) + lambda*delta);
 

@@ -4,6 +4,11 @@ function stateMat = HH_stateTrnsn(stateMat, paramStruct, delta)
 %% Set parameters
 
 dF = HH_dynamics([], stateMat, paramStruct);
+if ~isfield(paramStruct, 'mNoise')
+	noise = 0.1;
+else
+	noise = paramStruct.mNoise;
+end
 
 big_slopes = max(abs(dF)) > 5000;
 if any(big_slopes)
@@ -18,5 +23,5 @@ end
 
 stateMat = stateMat + delta * dF;  % integrate
 stateMat(1, :) = stateMat(1, :) + ...  % add noise to V
-	paramStruct.mNoise .* randn(1, size(stateMat, 2));
+	noise .* randn(1, size(stateMat, 2));
 

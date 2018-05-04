@@ -17,7 +17,7 @@ switch SPIKETIMES
 		fs = 3e4;	% sampling frequency [Hz]
 	case 'sim'
 		load sim.mat
-		fs = 1e5;
+		fs = 1e5; 
 	case 'new_sim'
 		HHSim;
 		fs = 1e5;
@@ -68,10 +68,6 @@ fn = fieldnames(boundsStruct)';
 %% Initialize PF
 
 % Initialize parameter particles
-% posterior = cell2mat(arrayfun(@(a,b) unifrnd(a, b, 1, N), ...
-% 	paramBounds(:, 1), paramBounds(:, 2), ...
-% 	'uniformoutput', false));
-
 particles.params = structfun(@(x) unifrnd(x(1), x(2), 1, N), boundsStruct, ...
 	'uniformoutput', false);
 
@@ -109,7 +105,7 @@ for k = 1:min(K, K_MAX)		% for each observation
 	
 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
 % 	[posterior, inds] = resamplingFcn(particles, probability, obsn(k)); % ... resample particles
-	[particles, inds] = resamplingFcn(particles, probability, 0); % ... resample particles
+	[particles, inds] = resamplingFcn(particles, probability, obsn(k)); % ... resample particles
 	
 	
 	particles.params = keep_in_bounds(particles.params, boundsStruct);
@@ -202,7 +198,7 @@ if PLOT_RESULTS
     figure(6); fullwidth()
     plot(estimates.weights(1:k)); title('Mean Likelihood');
 
-    figure(7); fullwidth(numel(fn) > 1)
+    figure(7); clf; fullwidth(numel(fn) > 1)
     for i = 1:numel(fn)
 		f = fn{i};
         subplot(numel(fn), 1, i)

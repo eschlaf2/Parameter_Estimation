@@ -1,4 +1,4 @@
-function [posterior, inds] = resamplingMeng(particles, likelihood, trigger)
+function [posterior, inds] = resamplingMeng(particles, likelihood, obs)
 % See Meng, et al., 2014
 % At every spike time do a residual sampling scheme.
 %	Retain M = nw copies of each particle and then supplement missing
@@ -8,20 +8,24 @@ function [posterior, inds] = resamplingMeng(particles, likelihood, trigger)
 
 N = length(particles.weights);
 fn = fieldnames(particles.params);
+wDist = sort(particles.weights, 'descend');
+trigger = sum(wDist(1:N/10)) > .9;
+% trigger = obs;
 
 % Update weights
 weights = particles.weights .* likelihood + 1e-6;
 weights = weights/sum(weights);
-particles.weights = weights;
 
 idx = @(A, ind) A(ind);
 cc = structfun(@(x) idx(corrcoef(x, weights), 3), particles.params);
 ll_dist = sort(histcounts(likelihood, 10), 'descend');
-if ll_dist(1) / N > .98
-	rho = 1.1 * ones(size(cc));
-else
-	rho = 1.01 - .05 * abs(cc); % discount factor
-end
+% if ll_dist(1) / N > .98
+% 	rho = 1.01 * ones(size(cc));
+% else
+% 	rho = 1.01 - .08 * abs(cc); % discount factor
+	rho = ones(size(cc));
+	
+% end
 
 
 % Draw new parameters
@@ -33,7 +37,6 @@ for i = 1:length(fn)
 	particles.params.(fn{i}) = m(particles.params.(fn{i}), rho(i));
 end
 % particles.params = structfun(m, particles.params, 'Uni', 0);
-particles.weights = weights;
 particles.pNoise = max(h2 .* sigma, particles.pNoise);
 
 % Resample if triggered ...
@@ -61,6 +64,7 @@ else % bootstrap
 	try 
 		r = rand(1, N);
 		inds = floor(interp1(cumsum(weights), 1:N, r, 'linear', 0)) + 1;
+		particles.weights = weights;
 	catch ME
 		warning('error')
 	end
