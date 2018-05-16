@@ -8,7 +8,7 @@ PLOT_RESULTS = true;
 K_MAX = 1e3;
 
 %% Load firing times
-
+ 
 switch SPIKETIMES
 	case 'load'
 		load firings.mat	% sorted and curated firings from binary_small.dat (preictal); 
@@ -16,7 +16,7 @@ switch SPIKETIMES
 		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
 		fs = 3e4;	% sampling frequency [Hz]
 	case 'sim'
-		load sim.mat
+		load simCell4.mat
 		fs = 1e5; 
 	case 'new_sim'
 		HHSim;
