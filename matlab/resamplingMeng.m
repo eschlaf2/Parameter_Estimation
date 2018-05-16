@@ -79,6 +79,7 @@ for i = 1:length(fn)
 end
 posterior.weights = posterior.weights(inds) / sum(posterior.weights(inds));
 posterior.states = posterior.states(:, inds);
+posterior.trigger = trigger;
 
 end
 

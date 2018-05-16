@@ -22,7 +22,7 @@ crossings = sum(diff(window > Vth) > 0);
 % % lambda(window(1,:) >= Vth) = b;
 % lambda(all(window <= Vth)) = b;
 
-lambda = h * 1./(10 * abs(crossings - observation) + 1);
+lambda = h * 1./(10 * abs(crossings - observation).^2 + 1);
 % lambda = h * ones(1, N);
 % lambda = h * (crossings == observation);
 % if ~observation

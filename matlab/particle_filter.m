@@ -1,7 +1,7 @@
 %% Set parameters
 
 model = 'HH';	% select which model to use
-SPIKETIMES = 'new_sim'; % simulate ('sim') or 'load' spike times
+SPIKETIMES = 'sim'; % simulate ('sim') or 'load' spike times
 N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
 PLOT = false;
 PLOT_RESULTS = true;
@@ -88,6 +88,7 @@ paramDist = structfun(@(x) zeros(1e3, K, 'single'), boundsStruct, 'uni', 0); % f
 
 paramDistX = structfun(@(x) linspace(x(1), x(2), 1e3), boundsStruct, ...
 	'UniformOutput', false);
+triggered = zeros(1, K);
 
 
 %% Run PF
@@ -106,7 +107,7 @@ for k = 1:min(K, K_MAX)		% for each observation
 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
 	[particles, inds] = resamplingFcn(particles, probability, obsn(k)); % ... resample particles
 	
-	
+	triggered(k) = particles.trigger;
 	particles.params = keep_in_bounds(particles.params, boundsStruct);
 	weighted_mean = @(x) sum(x .* particles.weights, 2);
 	estimates.states(:, k) = weighted_mean(particles.states);
