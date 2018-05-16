@@ -5,7 +5,8 @@ function stateMat = HH_stateTrnsn(stateMat, paramStruct, delta)
 
 dF = HH_dynamics([], stateMat, paramStruct);
 if ~isfield(paramStruct, 'mNoise')
-	noise = 0.1;
+	noise = default_HH_params();
+	noise = noise.mNoise;
 else
 	noise = paramStruct.mNoise;
 end

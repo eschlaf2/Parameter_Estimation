@@ -16,7 +16,7 @@ switch SPIKETIMES
 		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
 		fs = 3e4;	% sampling frequency [Hz]
 	case 'sim'
-		load simCell4.mat
+		load simCell4_EBvariable.mat
 		fs = 1e5; 
 	case 'new_sim'
 		HHSim;
@@ -104,7 +104,6 @@ for k = 1:min(K, K_MAX)		% for each observation
 	particles.states = prediction;
 	
 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
-% 	[posterior, inds] = resamplingFcn(particles, probability, obsn(k)); % ... resample particles
 	[particles, inds] = resamplingFcn(particles, probability, obsn(k)); % ... resample particles
 	
 	
@@ -171,7 +170,7 @@ if PLOT_RESULTS
     xlabel('Time [s]');
     title('Hidden States')
 
-    figure(5); clf; fullwidth(1)
+    figure(5); clf; fullwidth()
     for i = 1:numel(fn)
 		f = fn{i};
         subplot(numel(fn), 1, i)
@@ -198,7 +197,7 @@ if PLOT_RESULTS
     figure(6); fullwidth()
     plot(estimates.weights(1:k)); title('Mean Likelihood');
 
-    figure(7); clf; fullwidth(numel(fn) > 1)
+    figure(7); clf; fullwidth(numel(fn) > 2)
     for i = 1:numel(fn)
 		f = fn{i};
         subplot(numel(fn), 1, i)

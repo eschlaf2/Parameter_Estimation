@@ -10,7 +10,10 @@ n = 0.0147;
 h = 0.7497;
 B = 0.0326;
 
-simParams = structfun(@(x) x * ones(1, TOTAL_TIME, 'single'), default_HH_params(), 'Uni', 0);
+p = default_HH_params();
+p.mNoise = 0.1;
+
+simParams = structfun(@(x) x * ones(1, TOTAL_TIME, 'single'), p, 'Uni', 0);
 simParams.EB = linspace(-90, -60, TOTAL_TIME);
 % simParams.mNoise = 0.1 * randn(1, TOTAL_TIME);
 
