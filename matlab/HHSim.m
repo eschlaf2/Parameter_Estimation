@@ -3,7 +3,7 @@
 % noiseStd = [1 0 0 0]; % ... Measurment noise
 delta = 0.01; % integration step [ms]
 Vth = 30; % count spikes when voltage goes above Vth
-TOTAL_TIME = 2e3 * 1/delta; % time steps to simulate (ms * fs)
+TOTAL_TIME = 1e3 * 1/delta; % time steps to simulate (ms * fs)
 
 V =	-71;
 n = 0.0147; 
@@ -11,11 +11,13 @@ h = 0.7497;
 B = 0.0326;
 
 p = default_HH_params();
-p.mNoise = 0.5;
+p.mNoise = 0.1;
+% p.I = 5;
 
 simParams = structfun(@(x) x * ones(1, TOTAL_TIME, 'single'), p, 'Uni', 0);
-simParams.EB = linspace(-90, -60, TOTAL_TIME);
-% simParams.I = linspace(1.8, 2.2, TOTAL_TIME); 
+% simParams.EB = linspace(-90, -60, TOTAL_TIME);
+% simParams.I = linspace(1, 5, TOTAL_TIME); 
+simParams.gB = linspace(0.5, 6, TOTAL_TIME);
 % simParams.mNoise = 0.1 * randn(1, TOTAL_TIME);
 
 
