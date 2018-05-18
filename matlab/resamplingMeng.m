@@ -9,8 +9,8 @@ function [posterior, inds] = resamplingMeng(particles, likelihood, obs)
 N = length(particles.weights);
 fn = fieldnames(particles.params);
 wDist = sort(particles.weights, 'descend');
-trigger = sum(wDist(1:N/10)) > .9;
-% trigger = obs;
+% trigger = sum(wDist(1:N/10)) > .9;
+trigger = obs;
 
 % Update weights
 weights = particles.weights .* likelihood + 1e-6;
@@ -18,7 +18,7 @@ weights = weights/sum(weights);
 
 idx = @(A, ind) A(ind);
 cc = structfun(@(x) idx(corrcoef(x, weights), 3), particles.params);
-ll_dist = sort(histcounts(likelihood, 10), 'descend');
+% ll_dist = sort(histcounts(likelihood, 10), 'descend');
 % if ll_dist(1) / N > .98
 % 	rho = 1.01 * ones(size(cc));
 % else
