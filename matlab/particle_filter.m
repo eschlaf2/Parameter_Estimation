@@ -198,7 +198,7 @@ if PLOT_RESULTS
     figure(6); fullwidth()
     plot(estimates.weights(1:k)); title('Mean Likelihood');
 
-    figure(7); clf; fullwidth(numel(fn) > 2)
+    figure(7); clf; fullwidth(numel(fn) > 3)
     for i = 1:numel(fn)
 		f = fn{i};
         subplot(numel(fn), 1, i)
