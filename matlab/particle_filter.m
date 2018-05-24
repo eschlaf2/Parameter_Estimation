@@ -2,10 +2,12 @@
 clear
 model = 'HH';	% select which model to use
 SPIKETIMES = 'new_sim'; % simulate ('sim') or 'load' spike times
-N = 1e3; % number of particles; Meng used 1e4, but start at 1e3 for speed
+N = 200;  % number of particles; Meng used 1e4, but start at 1e3 for speed
+M = 10;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;
 PLOT_RESULTS = true;
 K_MAX = 1e3;
+alpha = 0.5;  % particle survival rate during annealing 
 
 %% Load firing times
  
@@ -32,7 +34,8 @@ switch model
 		
 		stateNames = {'V', 'n', 'h', 'B'};
 		
-		procNoise = 0.01; % std of process noise as proportion of range
+% 		procNoise = 0.01; % std of process noise as proportion of range
+		procNoise = 0.1; % covariance of process noise as proportion of range
 		dt = 0.01;	% integration step [ms]
 		
 		W = 3;	% window (ms)
@@ -59,7 +62,7 @@ obsn = histcounts(spiketimes, binedges);
 
 %% Set convenience variables
 NUM_STATES = size(s0, 1);
-NUM_PARAMS = size(boundsStruct, 1);
+NUM_PARAMS = size(fieldnames(boundsStruct), 1);
 NUM_ALL = NUM_STATES + NUM_PARAMS + 1;
 K = length(obsn) - W;
 fn = fieldnames(boundsStruct)';
@@ -89,26 +92,37 @@ paramDist = structfun(@(x) zeros(1e3, K, 'single'), boundsStruct, 'uni', 0); % f
 paramDistX = structfun(@(x) linspace(x(1), x(2), 1e3), boundsStruct, ...
 	'UniformOutput', false);
 triggered = zeros(1, K);
-
+beta = ones(M, 1);  % Initial exponents for annealing
+P0 = diag(particles.pNoise);  % Covariance matrix - see APF paper for ideas on how to improve this
+P = @(m, i) particles.pNoise(i) * alpha ^ m;
 
 %% Run PF
 for k = 1:min(K, K_MAX)		% for each observation
 	
 	prediction = particles.states;
-	
-	for i = 1:binwidth % for each integration step within a bin
+	for i = 1:binwidth  % for each integration step within a bin (advance to t + 1)
 		prediction = transitionFcn(prediction, particles.params);	% ... integrate states
 	end
-	
-	% Update window of V surrounding t_k
-	window = updateWindow(prediction, W*binwidth, @(s) transitionFcn(s, particles.params));
 	particles.states = prediction;
 	
-	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
-	[particles, inds] = resamplingFcn(particles, probability, obsn(k)); % ... resample particles
-	
-	triggered(k) = particles.trigger;
-	particles.params = keep_in_bounds(particles.params, boundsStruct);
+	% Resample
+% 	params = reshape(struct2array(particles.params), N, []);
+	params = particles.params;
+	for m = M:-1:1  % anneal
+		% Update window of V surrounding t_k
+		window = updateWindow(prediction, W*binwidth, @(s) transitionFcn(s, params));
+
+		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+		[inds, beta(m)] = anneal(probability, alpha, beta(m));  % get betas and sample indices
+% 		params = structfun(@(x) x(inds), params, 'Uni', 0);  % resample
+		for ii = 1:NUM_PARAMS  % add noise
+			params.(fn{ii}) = params.(fn{ii})(inds) + P(m, ii) * randn(1, N);
+		end
+		
+% 		[particles, inds] = resamplingFcn(particles, probability, 0); % ... resample particles	
+	end
+% 	triggered(k) = particles.trigger;
+	particles.params = keep_in_bounds(params, boundsStruct);
 	weighted_mean = @(x) sum(x .* particles.weights, 2);
 	estimates.states(:, k) = weighted_mean(particles.states);
 	estimates.weights(k) = mean(probability); 
@@ -218,40 +232,4 @@ if exist('outfile', 'var')
    print(5, [outfile '_5'], '-dpng')
    print(7, [outfile '_7'], '-dpng')
    print(99, [outfile '_sim'], '-dpng')
-end
-%% Supplementary functions
-
-function window = updateWindow(prediction, W, transitionFcn)
-
-	window = zeros([size(prediction) W]);
-
-	window(:, :, 1) = prediction;
-	for i = 2:W
-		window(:, :, i) = transitionFcn(window(:, :, i - 1));
-	end
-		
-end
-
-function bounded = keep_in_bounds(data, bounds)
-% hit the wall
-
-bounded = data;
-
-fn = fieldnames(bounds)';
-for i = 1:numel(fn)
-	f = fn{i};
-	b = bounds.(f);
-	if ~b(3), continue; end  % if parameter is not bounded continue
-	b(1:2) = (b(1:2) - mean(b(1:2))) * b(3) + mean(b(1:2));  % adjust range
-	d = data.(f);
-
-	indsHi = d > b(2);
-	indsLo = d < b(1);
-	% High values move inside range
-	d(indsHi) = b(2) - abs(randn(1, sum(indsHi)) * .02 * diff(b(1:2)));  
-	% ... and Low values
-	d(indsLo) = b(1) + abs(randn(1, sum(indsLo)) * .02 * diff(b(1:2)));
-	bounded.(f) = d;
-end
-
 end
