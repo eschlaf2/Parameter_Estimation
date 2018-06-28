@@ -13,4 +13,4 @@ p.tauB = 64;
 p.I = 2;
 p.EK = -95;
 p.gK = 7;
-p.mNoise = 0;
+p.mNoise = 0.1;

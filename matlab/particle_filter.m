@@ -3,8 +3,8 @@ clear
 model = 'HH';	% select which model to use
 SPIKETIMES = 'new_sim'; % simulate ('sim') or 'load' spike times
 N = 1e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
-Nanneal = 200;  % number of particles for annealing
-M = 10;  % annealing layers (try using only 200 particles with 10 layers)
+Nanneal = 10e2;  % number of particles for annealing
+M = 3;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;
 PLOT_RESULTS = true;
 K_MAX = 1e3;
@@ -35,7 +35,6 @@ switch model
 		
 		stateNames = {'V', 'n', 'h', 'B'};
 		
-% 		procNoise = 0.01; % std of process noise as proportion of range
 		procNoise = 0.05; % covariance of process noise as proportion of range
 		dt = 0.01;	% integration step [ms]
 		
@@ -96,6 +95,7 @@ triggered = zeros(1, K);
 beta = ones(M, 1);  % Initial exponents for annealing
 P0 = diag(particles.pNoise);  % Covariance matrix - see APF paper for ideas on how to improve this
 P = @(m, i) particles.pNoise(i) * alpha ^ m;
+ESS = 1;
 
 %% Run PF
 for k = 1:min(K, K_MAX)		% for each observation
@@ -110,12 +110,17 @@ for k = 1:min(K, K_MAX)		% for each observation
 	window = updateWindow(prediction, W*binwidth, @(s) transitionFcn(s, params));
 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
 	
-	trig = obsn(k);
-	[particles, inds] = resamplingFcn(particles, probability, trig); % ... resample particles	
-	triggered(k) = trig;
+% 	if M < 1  % if no annealing, use the resampling function
+		trig = obsn(k);
+		[particles, inds] = resamplingFcn(particles, probability, trig); % ... resample particles	
+		triggered(k) = trig;
+		wts = particles.weights;
+% 	else  % else assign weights based on single probability calculation
+% 		wts = probability + 1e-6;
+% 		wts = wts / sum(wts);
+% 	end
+% 	
 	particles.params = keep_in_bounds(particles.params, boundsStruct);
-	wts = particles.weights;
-
 	for m = M:-1:1  % anneal
 		
 		if m > 1
@@ -125,7 +130,6 @@ for k = 1:min(K, K_MAX)		% for each observation
 		end
 		
 		[inds, beta(m)] = anneal(wts, alpha, beta(m), Nm);  % get betas and sample indices
-% 		params = structfun(@(x) x(inds), params, 'Uni', 0);  % resample
 
 		for ii = 1:NUM_PARAMS  % add noise
 			params.(fn{ii}) = params.(fn{ii})(inds) + ...
@@ -137,16 +141,24 @@ for k = 1:min(K, K_MAX)		% for each observation
 		% Update window of V surrounding t_k
 		window = updateWindow(prediction, W*binwidth, @(s) transitionFcn(s, params));
 		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
-		wts = wts(inds) .* (probability / sum(probability));
+		wts = particles.weights(inds) .* probability + 1e-6;
+		wts = wts / sum(wts);
 		particles.params = params;
 		particles.states = prediction;
+% 		particles.weights = particles.weights(inds) / sum(particles.weights(inds));
+		particles.weights = wts;
 	end
 	
-% 	particles.weights = particles.weights * (probability / sum(probability));
 	weighted_mean = @(x) sum(x .* particles.weights, 2);
 	estimates.states(:, k) = weighted_mean(particles.states);
 	estimates.weights(k) = median(particles.weights); 
-	estimates.ESS(k) = 1 / sum(particles.weights.^2); 
+	ESS = 1 / sum(particles.weights.^2) / N; 
+	estimates.ESS(k) = ESS;
+	
+% 	if M > 0  % if annealing, reset particle weights
+% 		particles.weights = 1/N * ones(1, N);
+% 	end
+	
 	temp = structfun(@sort, particles.params, 'uni', 0);
 	
 	for f = fn
@@ -238,7 +250,7 @@ if PLOT_RESULTS
 	xx = 1:k;
 	plot(xx(triggered(1:k) > 0), wts(triggered(1:k) > 0), 'r*'); hold off;
 	subplot(2,1,2)
-	plot(estimates.ESS(1:k) / N * 100); title('ESS%')
+	plot(estimates.ESS(1:k) * 100); title('ESS%')
 
     figure(7); clf; fullwidth(numel(fn) > 3)
     for i = 1:numel(fn)

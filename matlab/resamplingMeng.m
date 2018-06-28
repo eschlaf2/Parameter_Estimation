@@ -8,7 +8,7 @@ function [posterior, inds] = resamplingMeng(particles, likelihood, obs)
 
 N = length(particles.weights);
 fn = fieldnames(particles.params);
-wDist = sort(particles.weights, 'descend');
+% wDist = sort(particles.weights, 'descend');
 % trigger = sum(wDist(1:N/10)) > .6;
 trigger = obs;
 
