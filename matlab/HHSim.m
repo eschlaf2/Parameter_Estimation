@@ -4,6 +4,7 @@
 delta = 0.01; % integration step [ms]
 Vth = 30; % count spikes when voltage goes above Vth
 TOTAL_TIME = 1e3 * 1/delta; % time steps to simulate (ms * fs)
+% TOTAL_TIME = K_MAX * 1/delta;
 
 V =	-71;
 n = 0.0147; 
@@ -11,15 +12,37 @@ h = 0.7497;
 B = 0.0326;
 
 p = default_HH_params();
-p.mNoise = 0.1;
-% p.I = 5;
+
+p.mNoise = 0.5;
 
 simParams = structfun(@(x) x * ones(1, TOTAL_TIME, 'single'), p, 'Uni', 0);
-% simParams.EB = linspace(-90, -60, TOTAL_TIME);
-% simParams.I = linspace(1, 5, TOTAL_TIME); 
-simParams.gB = linspace(0.5, 6, TOTAL_TIME);
-% simParams.mNoise = 0.1 * randn(1, TOTAL_TIME);
 
+
+i = 1;
+if exist('estimates','var')
+	try
+		originalSim = sim;
+		for f = fieldnames(estimates.params)'
+			temp = repmat(estimates.params.(f{:})(1:k)', 1/delta,1);
+			simParams.(f{:})(1:k/delta) = temp(:);
+		% 	simParams.(f{:})(1:k/delta) = interp1((1:1/delta:k/delta), estimates.params.(f{:})(1:k), (1:k/delta));
+			figure(10)
+			subplot(length(fieldnames(estimates.params)), 1, i)
+			plot(simParams.(f{:}));
+			i = i + 1;
+		end
+	catch ME
+	end
+
+else
+	% simParams.EB = linspace(-90, -60, TOTAL_TIME);
+% 	simParams.I = linspace(1, 5, TOTAL_TIME); 
+	% simParams.gB = linspace(0.5, 6, TOTAL_TIME);
+end
+
+
+simParams.I = simParams.I + 8*pinknoise(TOTAL_TIME);
+% simParams.mNoise = p.mNoise * randn(1, TOTAL_TIME);
 
 s0 = [V; n; h; B];
 
@@ -50,4 +73,6 @@ if ~exist('PLOT_RESULTS', 'var') || PLOT_RESULTS
     plot([spikeT(:) spikeT(:)]', [zeros(size(spikeT(:))) ones(size(spikeT(:)))]', 'color', lines(1))
     xlim(get(ax, 'xlim'))
     yticks([]); xticks([]);
+	
+	
 end

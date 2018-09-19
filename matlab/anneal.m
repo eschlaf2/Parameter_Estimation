@@ -30,7 +30,8 @@ catch ME
 	end
 end
 
-weights = (weights .^ beta) + 1e-6 * randn(size(weights));
+% weights = (weights .^ beta) + 1e-6 * randn(size(weights));
+weights = (weights .^ beta) + 1e-6;
 weights = weights / sum(weights);
 
 try

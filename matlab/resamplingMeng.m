@@ -60,7 +60,9 @@ if trigger
 	inds = [inds, newParts];
 	particles.weights = 1/N * ones(1, N);
 	
-else % bootstrap
+elseif 1  % no bootstrap
+	inds = 1:N;
+else  % bootstrap
 	try 
 		r = rand(1, N);
 		inds = floor(interp1(cumsum(weights), 1:N, r, 'linear', 0)) + 1;

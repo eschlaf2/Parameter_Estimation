@@ -1,14 +1,17 @@
 %% Set parameters
 clear
 model = 'HH';	% select which model to use
-SPIKETIMES = 'new_sim'; % simulate ('sim') or 'load' spike times
-N = 1e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
-Nanneal = 10e2;  % number of particles for annealing
-M = 3;  % annealing layers (try using only 200 particles with 10 layers)
-PLOT = false;
-PLOT_RESULTS = true;
-K_MAX = 1e3;
-alpha = 0.5;  % particle survival rate during annealing 
+SPIKETIMES = 'newSim'; % simulate ('sim') or 'load' spike times
+N = 5e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
+Nanneal = N / 5;  % number of particles for annealing
+M = 5;  % annealing layers (try using only 200 particles with 10 layers)
+PLOT = false;  % Plot particles while algorithm is running
+PLOT_RESULTS = true;  % Create summary plots when analysis is complete
+% STATE_BOUNDS = [-200, 200, -20, 20];
+K_MAX = 2e4;  % Maximum number of time steps
+alpha = 0.6;  % particle survival rate during annealing 
+filename = 'pf.gif'; newgif = false;
+% injectedCurrent = pinknoise(K_MAX);
 
 %% Load firing times
  
@@ -21,32 +24,63 @@ switch SPIKETIMES
 	case 'sim'
 		load simCell4_EBvariable.mat
 		fs = 1e5; 
-	case 'new_sim'
-		HHSim;
-		fs = 1e5;
+	case 'newSim'
+		switch model
+			case 'HH'
+				Vth = 30;
+		% 		HHSim;
+				fs = 1e5;
+			case 'Izh'
+				Vth = 20;
+				fs = 1e5;
+		end
+		[sim, spiketimes, simParams] = modelSim(model, Vth);
+		meanSpike = mean(cell2mat(arrayfun(@(i) sim(1, i - 50:i+100), spiketimes, 'uni', 0)'));
 end
 
 %% Select model
 switch model
-	case 'why'	% easter egg
+	case 'why'	% place holder
 		why
+	case 'Izh'
+		[s0, boundsStruct] = Izh_stateBounds();
+		
+		stateNames = {'v', 'u'};
+		
+		dt = 0.01;	% integration step [ms]
+		
+		W = 3;	% window (ms)
+		
+		Vth = 20; % Voltage threshold [mV]
+		
+		delta = 1; % binwidth [ms]
+		
+		transitionFcn = @(states, particles) Izh_stateTrnsn(states, particles, dt);
+		likelihoodFcn = @(window, obsn) ...
+			likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);
+% 			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
+			
+		resamplingFcn = @resamplingMeng;
+		
+		
 	case 'HH'	% Hodgkin-Huxley
 		[s0, boundsStruct] = HH_stateBounds(); % get initial conditions and parameter bounds
 		
 		stateNames = {'V', 'n', 'h', 'B'};
 		
-		procNoise = 0.05; % covariance of process noise as proportion of range
+% 		procNoise = 0.02; % covariance of process noise as proportion of range
 		dt = 0.01;	% integration step [ms]
 		
-		W = 5;	% window (ms)
+		W = 0;	% window (ms)
 		Vth = 30; % Voltage threshold [mV]
 		
-		delta = 1; % binwidth [ms]
+		delta = .01; % binwidth [ms]
 		
 		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt);
 		likelihoodFcn = @(window, obsn) ...
 			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
 % 			likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);
+		likelihoodFcn = @(simV, obsnV) 1 ./ (simV - obsnV) .^2;
 			
 		resamplingFcn = @resamplingMeng;
 		
@@ -58,7 +92,12 @@ binwidth = fs * delta * 1e-3; % samples per bin
 binedges = 0:binwidth:(max(spiketimes) + binwidth);
 tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
 obsn = histcounts(spiketimes, binedges);
-% obsn = mean(reshape(sim(1,:)', binwidth, []));
+% obsnV = mean(reshape(sim(1, :)', binwidth, []));
+% obsnV = sim(1, 1:binwidth:end);
+obsnV = zeros(1, ceil(spiketimes(end)/binwidth) * binwidth);
+obsnV(spiketimes) = 1;
+obsnV = conv(obsnV, meanSpike - min(meanSpike), 'same') + min(meanSpike);
+obsnV = max(reshape(obsnV, binwidth, []), [], 1);
 
 %% Set convenience variables
 NUM_STATES = size(s0, 1);
@@ -83,7 +122,7 @@ estimates.weights = zeros(1, K);
 particles.weights = 1/N * ones(1, N); % initialize all weights to 1/N
 
 particles.states = s0 .* ones(NUM_STATES, N); % states associated with each particle
-particles.pNoise = structfun(@(x) procNoise .* range(x(1:2)), boundsStruct); % noise to be injected into the filter
+particles.pNoise = structfun(@(x) x(4) .* range(x(1:2)), boundsStruct); % noise to be injected into the filter
 
 % paramDistX = cell2mat(arrayfun(@(i) linspace(boundsStruct(i, 1), boundsStruct(i, 2), 1e3), pEst, ...
 % 	'UniformOutput', false));
@@ -103,12 +142,18 @@ for k = 1:min(K, K_MAX)		% for each observation
 	prediction = particles.states;
 	for i = 1:binwidth  % for each integration step within a bin (advance to t + 1)
 		prediction = transitionFcn(prediction, particles.params);	% ... integrate states
+% 		try
+% 			prediction(prediction < STATE_BOUNDS(1)) = STATE_BOUNDS(1);
+% 			prediction(prediction > STATE_BOUNDS(2)) = STATE_BOUNDS(2);
+% 		catch ME
+% 		end
 	end
 	particles.states = prediction;
 	
 	params = particles.params;
-	window = updateWindow(prediction, W*binwidth, @(s) transitionFcn(s, params));
-	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+	window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
+% 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+	probability = likelihoodFcn(window(1, :), obsnV(k)); % ... calculate likelihood
 	
 % 	if M < 1  % if no annealing, use the resampling function
 		trig = obsn(k);
@@ -139,8 +184,12 @@ for k = 1:min(K, K_MAX)		% for each observation
 		
 		prediction = prediction(:, inds); % resample
 		% Update window of V surrounding t_k
-		window = updateWindow(prediction, W*binwidth, @(s) transitionFcn(s, params));
-		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+		window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
+% 		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ...
+% 		calculate likelihood base
+		probability = likelihoodFcn(window(1, :), obsnV(k)); % ... calculate likelihood based on voltage
+
+		
 		wts = particles.weights(inds) .* probability + 1e-6;
 		wts = wts / sum(wts);
 		particles.params = params;
@@ -179,31 +228,54 @@ for k = 1:min(K, K_MAX)		% for each observation
 		disp(['k = ' num2str(k)])
 	end
 	
-	if PLOT && ~mod(k, 5)
-		figure(999)
+	if PLOT && ~mod(k, 1)
+		h = figure(999);
 		x = fn{1}; y = fn{2};
 		inds = randsample(N, 100);
 		scatter(particles.params.(x)(inds), particles.params.(y)(inds), 16, particles.weights(inds), 'filled');
 		hold on; plot(simParams.(x)(k * binwidth), simParams.(y)(k*binwidth), 'r*'); hold off;
 		hold on; plot(estimates.params.(x)(k), estimates.params.(y)(k), 'b*'); hold off;
-		xlim(boundsStruct.(x)(1:2)); ylim(boundsStruct.(y)(1:2));
+		xlim((boundsStruct.(x)(1:2) - mean(boundsStruct.(x)(1:2))) * 2*boundsStruct.(x)(3) + mean(boundsStruct.(x)(1:2))); 
+		ylim((boundsStruct.(y)(1:2) - mean(boundsStruct.(y)(1:2))) * 2*boundsStruct.(y)(3) + mean(boundsStruct.(y)(1:2))); 
 		colormap('cool'); caxis([0 2/N]); colorbar
 		title(sprintf('%1.2f: %d', tSpan(k) * 1e3, obsn(k)))
 		xlabel(x); ylabel(y);
 		drawnow;
-		pause(1e-6)
+% 		pause(1e-6)
+		
+		if 1
+			frame = getframe(h); 
+			im = frame2im(frame); 
+			[imind,cm] = rgb2ind(im,256); 
+			% Write to the GIF File 
+			if newgif
+			  imwrite(imind,cm,filename,'gif', 'Loopcount',inf, 'delaytime', 0); 
+			  newgif = false;
+			else 
+			  imwrite(imind,cm,filename,'gif','WriteMode','append', 'delaytime', 0); 
+			end 
+		end
 	end
 end
 
+for f = fn
+	f = f{:};
+	estimates.params.(f)(k:end) = estimates.params.(f)(k);
+end
+
+beep
+
 %% Plot results
 if PLOT_RESULTS
-    colors = lines(7);
+    colors = lines(max(NUM_PARAMS, 7));
     k = k-1;
 
-    figure(3); fullwidth()
+    figure(3); fullwidth(0)
     stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
-    plot(tSpan(1:k), estimates.states(1, 1:k)/Vth, 'Color', colors(2,:));
-    plot(tSpan(1:k), sim(1, 1:binwidth:k*binwidth)/Vth, 'Color', colors(1,:))
+    plot(tSpan(1:k), estimates.states(1, 1:k), 'Color', colors(2,:));
+	if ~strcmp(SPIKETIMES, 'load')
+		plot(tSpan(1:k), obsnV(1:k), 'Color', colors(1,:))
+	end
     plot(tSpan(1:k), ones(1, k), '--', 'Color', .5*[1 1 1]); hold off;
     ylim(1.1*(get(gca,'YLim') - mean(get(gca, 'Ylim'))) + mean(get(gca, 'YLim')));
     legend('Spikes','Estimated Voltage', 'True Voltage', 'location', 'best');
@@ -211,14 +283,16 @@ if PLOT_RESULTS
     title('Voltage')
 
     figure(4); fullwidth()
-    plot((tSpan(1:k) .* ones(3, k))', estimates.states(2:4, 1:k)', 'linewidth', 2); 
-    legend(stateNames(2:4))
+    plot((tSpan(1:k) .* ones(3, k))', estimates.states(2:end, 1:k)', 'linewidth', 2); 
+    legend(stateNames(2:end))
     hold on; set(gca, 'ColorOrderIndex', 1)
-    plot((tSpan(1:k) .* ones(3, k))', sim(2:4, 1:binwidth:k*binwidth)', ':', 'linewidth', 2); hold off;
+	if ~strcmp(SPIKETIMES, 'load')
+		plot((tSpan(1:k) .* ones(3, k))', sim(2:end, 1:binwidth:k*binwidth)', ':', 'linewidth', 2); hold off;
+	end
     xlabel('Time [s]');
     title('Hidden States')
 
-    figure(5); clf; fullwidth()
+    figure(5); clf; fullwidth(numel(fn) > 3)
     for i = 1:numel(fn)
 		f = fn{i};
         subplot(numel(fn), 1, i)
@@ -231,9 +305,11 @@ if PLOT_RESULTS
         plot(tSpan(1:k), estimates.params.(f)(1:k), 'linewidth', 2, ...
             'displayname', sprintf('%s Est', f), ...
             'Color', colors(i, :)); 
-        plot(tSpan(1:k), simParams.(f)(1:binwidth:k*binwidth)', '--', ...
-            'displayname', sprintf('%s True', f), ...
-            'Color', colors(i, :)); 
+		if ~strcmp(SPIKETIMES, 'load')
+			plot(tSpan(1:k), simParams.(f)(1:binwidth:k*binwidth)', '--', ...
+				'displayname', sprintf('%s True', f), ...
+				'Color', colors(i, :)); 
+		end
         hold off;
         legend();
         title(['Estimated ', f])
@@ -259,12 +335,16 @@ if PLOT_RESULTS
         contourf(tSpan(1:k-1), paramDistX.(f), squeeze(paramDist.(f)(:, 1:k-1)), 'linestyle', 'none')
         caxis([0 2/N]); % colormap('gray')
         colorbar()
-        hold on; 
-        plot(tSpan(1:k)', simParams.(f)(1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
-        hold off; 
+		if ~strcmp(SPIKETIMES, 'load')
+			hold on; 
+			plot(tSpan(1:k)', simParams.(f)(1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
+			hold off; 
+		end
         title([f ' Estimate'])
     end
     xlabel('Time [s]');
+	
+	[simEst, ~, ~] = modelSim(model, Vth, estimates);  % simulate based on estimated parameters
 end
 
 if exist('outfile', 'var')

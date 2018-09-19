@@ -1,5 +1,5 @@
-function [likelihood, window] = ...
-	likelihoodFcnMeng2011(window, observation, t, Vth)
+function [likelihood, window] = ... % window, observation, W, Vth, delta
+	likelihoodFcnMeng2011(window, observation, t, Vth, ~)
 % Calculates probabilities of each particle given observation
 % Inputs:
 %	window ...					m x n x k array where m is the number of

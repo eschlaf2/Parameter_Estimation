@@ -11,17 +11,18 @@ function [likelihood, window] = likelihoodFcnMeng(window, observation, W, Vth, d
 
 %% Set parameters
 h = 1/W; % weight
-b = h/10; % allowance
+b = h/100; % allowance
 N = size(window, 2); % number of particles
 
-window = squeeze(window(1, :, :))'; % Keep only the voltage of each particle
-crossings = sum(diff(window > Vth) > 0);
+v = squeeze(window(1, :, :))'; % Keep only the voltage of each particle
+% u = squeeze(window(2, :, :))';
+crossings = sum(diff(v > Vth) > 0);
 % crossings = any(window > Vth);
 lambda = h * 1./(abs(crossings - observation).^2 + 1);
 
 % lambda = h * ones(1, N);	% Compute lambda_k of each particle
 % lambda(window(1,:) >= Vth) = b;
-lambda(all(window <= Vth)) = b;
+lambda(all(v <= Vth)) = b;
 
 % lambda = h * ones(1, N);
 % lambda = h * (crossings == observation);
@@ -32,4 +33,6 @@ lambda(all(window <= Vth)) = b;
 % lambda(abs(crossings - observation) < 2) = h;
 
 likelihood = exp(observation * log(lambda*delta) - lambda*delta);
+% likelihood(any(v < -200)) = 0;
+% likelihood(any(u < -20)) = 0;
 
