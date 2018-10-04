@@ -2,8 +2,8 @@
 clear
 model = 'HH';	% select which model to use
 SPIKETIMES = 'newSim'; % simulate ('sim') or 'load' spike times
-N = 5e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
-Nanneal = N / 5;  % number of particles for annealing
+N = 2e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
+Nanneal = N;  % number of particles for annealing
 M = 5;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;  % Plot particles while algorithm is running
 PLOT_RESULTS = true;  % Create summary plots when analysis is complete
@@ -71,16 +71,17 @@ switch model
 % 		procNoise = 0.02; % covariance of process noise as proportion of range
 		dt = 0.01;	% integration step [ms]
 		
-		W = 0;	% window (ms)
+		W = 3;	% window (ms)
 		Vth = 30; % Voltage threshold [mV]
 		
-		delta = .01; % binwidth [ms]
+		delta = .1; % binwidth [ms]
 		
 		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt);
 		likelihoodFcn = @(window, obsn) ...
 			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
 % 			likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);
-		likelihoodFcn = @(simV, obsnV) 1 ./ (simV - obsnV) .^2;
+		sigma = 1;
+% 		likelihoodFcn = @(mu, x) 1 ./ (sqrt(2 * pi * sigma^2)) .* exp(-(x - mu).^2 / (2 * sigma^2));
 			
 		resamplingFcn = @resamplingMeng;
 		
@@ -93,11 +94,11 @@ binedges = 0:binwidth:(max(spiketimes) + binwidth);
 tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
 obsn = histcounts(spiketimes, binedges);
 % obsnV = mean(reshape(sim(1, :)', binwidth, []));
-% obsnV = sim(1, 1:binwidth:end);
-obsnV = zeros(1, ceil(spiketimes(end)/binwidth) * binwidth);
-obsnV(spiketimes) = 1;
-obsnV = conv(obsnV, meanSpike - min(meanSpike), 'same') + min(meanSpike);
-obsnV = max(reshape(obsnV, binwidth, []), [], 1);
+obsnV = sim(1, 1:binwidth:end);
+% obsnV = zeros(1, ceil(spiketimes(end)/binwidth) * binwidth);
+% obsnV(spiketimes) = 1;
+% obsnV = conv(obsnV, meanSpike - min(meanSpike), 'same') + min(meanSpike);
+% obsnV = max(reshape(obsnV, binwidth, []), [], 1);
 
 %% Set convenience variables
 NUM_STATES = size(s0, 1);
@@ -152,8 +153,8 @@ for k = 1:min(K, K_MAX)		% for each observation
 	
 	params = particles.params;
 	window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
-% 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
-	probability = likelihoodFcn(window(1, :), obsnV(k)); % ... calculate likelihood
+	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+% 	probability = likelihoodFcn(window(1, :), obsnV(k)); % ... calculate likelihood
 	
 % 	if M < 1  % if no annealing, use the resampling function
 		trig = obsn(k);
@@ -185,9 +186,9 @@ for k = 1:min(K, K_MAX)		% for each observation
 		prediction = prediction(:, inds); % resample
 		% Update window of V surrounding t_k
 		window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
-% 		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ...
+		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ...
 % 		calculate likelihood base
-		probability = likelihoodFcn(window(1, :), obsnV(k)); % ... calculate likelihood based on voltage
+% 		probability = likelihoodFcn(window(1, :), obsnV(k)); % ... calculate likelihood based on voltage
 
 		
 		wts = particles.weights(inds) .* probability + 1e-6;
@@ -344,7 +345,7 @@ if PLOT_RESULTS
     end
     xlabel('Time [s]');
 	
-	[simEst, ~, ~] = modelSim(model, Vth, estimates);  % simulate based on estimated parameters
+	[simEst, ~, ~] = modelSim(model, Vth, estimates, binwidth);  % simulate based on estimated parameters
 end
 
 if exist('outfile', 'var')
