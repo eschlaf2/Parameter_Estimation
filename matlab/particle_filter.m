@@ -1,9 +1,9 @@
 %% Set parameters
 clear
 model = 'HH';	% select which model to use
-SPIKETIMES = 'newSim'; % simulate ('sim') or 'load' spike times
+SPIKETIMES = 'sim'; % simulate ('newSim') or 'load' spike times
 N = 2e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
-Nanneal = N;  % number of particles for annealing
+Nanneal = 2e3;  % number of particles for annealing
 M = 5;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;  % Plot particles while algorithm is running
 PLOT_RESULTS = true;  % Create summary plots when analysis is complete
@@ -22,7 +22,7 @@ switch SPIKETIMES
 		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
 		fs = 3e4;	% sampling frequency [Hz]
 	case 'sim'
-		load simCell4_EBvariable.mat
+		load sim0.mat
 		fs = 1e5; 
 	case 'newSim'
 		switch model
@@ -345,12 +345,15 @@ if PLOT_RESULTS
     end
     xlabel('Time [s]');
 	
-	[simEst, ~, ~] = modelSim(model, Vth, estimates, binwidth);  % simulate based on estimated parameters
+	[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth);  % simulate based on estimated parameters
 end
 
 if exist('outfile', 'var')
-   save(outfile, 'sim', 'estimates')
+%    save(outfile, 'sim', 'estimates')
+   save(outfile);
    print(5, [outfile '_5'], '-dpng')
    print(7, [outfile '_7'], '-dpng')
-   print(99, [outfile '_sim'], '-dpng')
+   if strcmp(SPIKETIMES, 'newSim')
+	   print(99, [outfile '_sim'], '-dpng')
+   end
 end

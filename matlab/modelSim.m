@@ -38,8 +38,8 @@ switch model
 		B = 0.0326;
 		s0 = [V; n; h; B];
 		
-		noise = 8 * pinknoise(TOTAL_TIME);
-		noise = 0;
+		noise = 4 * pinknoise(TOTAL_TIME);
+% 		noise = 0;
 		transitionFcn = @(state, p) HH_stateTrnsn(state, p, dt);
 		
 end
