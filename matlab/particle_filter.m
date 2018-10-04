@@ -74,7 +74,7 @@ switch model
 		W = 3;	% window (ms)
 		Vth = 30; % Voltage threshold [mV]
 		
-		delta = .1; % binwidth [ms]
+		delta = 1; % binwidth [ms]
 		
 		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt);
 		likelihoodFcn = @(window, obsn) ...
