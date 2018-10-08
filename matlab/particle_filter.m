@@ -1,5 +1,8 @@
 %% Set parameters
-clear
+if ~exist('outfile', 'var')
+	clear
+end
+rng('shuffle');
 model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('newSim') or 'load' spike times
 N = 2e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
