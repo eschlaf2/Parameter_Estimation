@@ -4,7 +4,7 @@ res = struct();  % store all results in a structure
 load('1', 'spiketimes');
 
 % load each trial and store the results in res
-for ii = 1:1000  
+for ii = 1:size(dir('*.mat'), 1)  
 	fname = num2str(ii);
 	load(fname, 'estimates', 'stEst', 'dt');	
 	for f = fieldnames(estimates.params)'
