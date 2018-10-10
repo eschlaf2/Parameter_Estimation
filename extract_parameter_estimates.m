@@ -15,6 +15,7 @@ for ii = 1:3
 	clear estimates stEst dt
 end
 
+save('res')
 
 % Clean up the following to visualize results in 3D
 
