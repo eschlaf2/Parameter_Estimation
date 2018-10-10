@@ -4,15 +4,24 @@ res = struct();  % store all results in a structure
 load('1', 'spiketimes');
 
 % load each trial and store the results in res
-for ii = 1:size(dir('*.mat'), 1)  
+fprintf(' 0%%\n');
+N = size(dir('*.mat'), 1);
+for ii = 1:N
 	fname = num2str(ii);
-	load(fname, 'estimates', 'stEst', 'dt');	
-	for f = fieldnames(estimates.params)'
-		param = f{:};
-		res.(param){ii} = estimates.params.(param);
+	try
+		load(fname, 'estimates', 'stEst', 'dt');	
+		for f = fieldnames(estimates.params)'
+			param = f{:};
+			res.(param){ii} = estimates.params.(param);
+		end
+		res.compare{ii} = compare_spiketimes(spiketimes, stEst, dt);
+		clear estimates stEst dt
+		fprintf('\b\b\b\b%02d%%\n', round(ii / N * 100))
+	catch ME
+% 		display(['Skipping file: ' fname])
+		fprintf('\b\b\b\bSkipping file: %s\n%02d%%\n', fname, round(ii / N * 100))
 	end
-	res.compare{ii} = compare_spiketimes(spiketimes, stEst, dt);
-	clear estimates stEst dt
+	
 end
 
 save('res')
