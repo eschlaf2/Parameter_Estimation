@@ -100,8 +100,9 @@ ENV/
 # mypy
 .mypy_cache/
 
-# binaries and swap 
+# binaries, swap, and raw data 
 ._*
 *.m~
 mbatch.sh.*
 *.icloud
+*.mat
