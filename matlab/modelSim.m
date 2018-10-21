@@ -38,7 +38,7 @@ switch model
 		B = 0.0326;
 		s0 = [V; n; h; B];
 		
-		noise = 4 * pinknoise(TOTAL_TIME);
+		noise = 2 * pinknoise(TOTAL_TIME);
 % 		noise = 0;
 		transitionFcn = @(state, p) HH_stateTrnsn(state, p, dt);
 		
@@ -46,6 +46,7 @@ end
 
 % Create time series for each paramter
 simParams = structfun(@(x) x * ones(1, TOTAL_TIME, 'single'), p, 'Uni', 0);
+simParams.gB = linspace(0.5, 6, TOTAL_TIME);
 
 % Use estimated parameters if given
 i = 1;
