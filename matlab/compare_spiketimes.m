@@ -1,6 +1,6 @@
 function result = compare_spiketimes(st1, st2, dt, outfile, showPlots)
 
-%%
+%% ISI
 
 if ~exist('showPlots', 'var')
 	PLOT = false;
@@ -30,7 +30,7 @@ if PLOT
 	histogram(ISI2, ceil(max(ISI2))); % hold on;
 	title('Sample 2')
 	subplot(2, 2, 3:4)
-	e1 = plot(x1, f1);
+	e1 = plot(x1, f1); hold on;
 	plot(x1, flo, 'b:', x1, fhi, 'b:')
 	e2 = plot(x2, f2); hold off;
 	legend([e1, e2], {'Sample 1', 'Sample 2'}, 'location', 'southeast')
@@ -40,13 +40,13 @@ if PLOT
 	end
 end
 
-%%
+%% ACF
 acf = cell(2, 1);
 numlags = min(numel(ISI1), numel(ISI2));
 for i = [1 2]
 	isi = eval(['ISI' num2str(i)]);
 	[acf{i}, lags] = xcorr(isi - mean(isi), numlags, 'coeff');
-	acf{i} = acf{i}(lags >= 0); lags = lags(lags >= 0);
+	acf{i} = acf{i}(lags > 0); lags = lags(lags > 0);
 	
 	if PLOT
 		figure(acfFig);
@@ -81,7 +81,7 @@ result.isiAcfDiff = sum(abs(acfDiff) > 2 * sqrt(1/numel(ISI1) + 1/numel(ISI2)));
 
 % Save figure
 
-%%
+%% MLE
 bins = 0:max([ISI1(:); ISI2(:)]);
 edges = [-.5, (bins + .5)];
 

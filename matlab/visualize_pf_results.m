@@ -13,8 +13,8 @@ for i = 1:N
 	acfDiff(i) = res.compare{i}.isiAcfDiff;
 	phatEst(i, :) = res.compare{i}.phat2;
 end
-pReject = p < .05;
-acfReject = acfDiff > 0;
+pReject = p < .0;
+acfReject = acfDiff > 10;
 reject = pReject - 2 * acfReject;
 
 pScaled = p / sum(p);
@@ -32,7 +32,7 @@ for f = fn
 	subplot(size(fn, 2) - 1, 1, i); i = i + 1;
 % 	plot(resMat.(f{:})(:, pReject), 'r'); hold on;
 % 	plot(resMat.(f{:})(:, acfReject), 'b'); hold on;
-	plot(resMat.(f{:})(:, reject == 0), 'color', .5 * [1 1 1]); hold on;
+	plot(resMat.(f{:})(:, reject == 0), 'color', .7 * [1 1 1]); hold on;
 	ax3 = plot(simParams.(f{:})(1:binwidth:T*binwidth), 'k--', 'linewidth', 3, ...
 		'Displayname', 'Actual');
 % 	ax1 = plot(sum(resMat.(f{:}) .* repmat(pScaled', T, 1), 2), 'linewidth', 3, ...
@@ -41,7 +41,9 @@ for f = fn
 		'Displayname', 'Median Estimate'); 
 	hold off
 	title(f{:})
+	axis('tight')
 end
 legend([ax3, ax2])
+
 
 figure(); stem(reject); fullwidth()
