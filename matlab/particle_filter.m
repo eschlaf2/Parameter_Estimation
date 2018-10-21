@@ -13,7 +13,7 @@ M = 5;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;  % Plot particles while algorithm is running
 PLOT_RESULTS = true;  % Create summary plots when analysis is complete
 % STATE_BOUNDS = [-200, 200, -20, 20];
-K_MAX = 2e4;  % Maximum number of time steps
+K_MAX = 1e4;  % Maximum number of time steps
 alpha = 0.6;  % particle survival rate during annealing 
 filename = 'pf.gif'; newgif = false;
 % injectedCurrent = pinknoise(K_MAX);
@@ -39,8 +39,8 @@ switch SPIKETIMES
 				Vth = 20;
 				fs = 1e5;
 		end
-		[sim, spiketimes, simParams] = modelSim(model, Vth);
-		meanSpike = mean(cell2mat(arrayfun(@(i) sim(1, i - 50:i+100), spiketimes, 'uni', 0)'));
+		[simV, spiketimes, simParams] = modelSim(model, Vth);
+		meanSpike = mean(cell2mat(arrayfun(@(i) simV(1, i - 50:i+100), spiketimes, 'uni', 0)'));
 end
 
 %% Select model
@@ -86,7 +86,7 @@ switch model
 			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
 % 			likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);
 		sigma = 1;
-% 		likelihoodFcn = @(mu, x) 1 ./ (sqrt(2 * pi * sigma^2)) .* exp(-(x - mu).^2 / (2 * sigma^2));
+% 		likelihoodFcn = @(mu, window) prod(1 ./ (sqrt(2 * pi * sigma^2)) .* exp(-(windo - mu).^2 / (2 * sigma^2)));
 			
 		resamplingFcn = @resamplingMeng;
 		
@@ -99,7 +99,7 @@ binedges = 0:binwidth:(max(spiketimes) + binwidth);
 tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
 obsn = histcounts(spiketimes, binedges);
 % obsnV = mean(reshape(sim(1, :)', binwidth, []));
-obsnV = sim(1, 1:binwidth:end);
+obsnV = simV(1, 1:binwidth:end);
 % obsnV = zeros(1, ceil(spiketimes(end)/binwidth) * binwidth);
 % obsnV(spiketimes) = 1;
 % obsnV = conv(obsnV, meanSpike - min(meanSpike), 'same') + min(meanSpike);
@@ -292,8 +292,9 @@ if PLOT_RESULTS
     plot((tSpan(1:k) .* ones(3, k))', estimates.states(2:end, 1:k)', 'linewidth', 2); 
     legend(stateNames(2:end))
     hold on; set(gca, 'ColorOrderIndex', 1)
-	if ~strcmp(SPIKETIMES, 'load')
-		plot((tSpan(1:k) .* ones(3, k))', sim(2:end, 1:binwidth:k*binwidth)', ':', 'linewidth', 2); hold off;
+	try
+		plot((tSpan(1:k) .* ones(3, k))', simV(2:end, 1:binwidth:k*binwidth)', ':', 'linewidth', 2); hold off;
+	catch ME
 	end
     xlabel('Time [s]');
     title('Hidden States')
@@ -350,7 +351,7 @@ if PLOT_RESULTS
     end
     xlabel('Time [s]');
 	
-	[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth);  % simulate based on estimated parameters
+	[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth, 'total_steps', size(simV, 2));  % simulate based on estimated parameters
 end
 
 if exist('outfile', 'var')

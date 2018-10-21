@@ -15,7 +15,9 @@ for a = 1:2:length(varargin)
 		case 'dt'
 			dt = varargin{a+1};
 		case 'total_time'
-			TOTAL_TIME = varargin{a+1};
+			TOTAL_TIME = varargin{a+1} * 1 / dt;
+		case 'total_steps'
+			TOTAL_TIME = varargin{a + 1};
 	end
 end
 
