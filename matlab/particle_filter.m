@@ -7,7 +7,7 @@ end
 
 model = 'HH';	% select which model to use
 SPIKETIMES = 'sim'; % simulate ('newSim') or 'load' spike times
-N = 2e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
+N = 10e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
 Nanneal = 2e3;  % number of particles for annealing
 M = 5;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;  % Plot particles while algorithm is running
