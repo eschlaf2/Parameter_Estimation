@@ -105,4 +105,3 @@ ENV/
 *.m~
 mbatch.sh.*
 *.icloud
-*.mat
