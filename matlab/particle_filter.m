@@ -86,7 +86,7 @@ switch model
 			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
 % 			likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);
 		sigma = 1;
-% 		likelihoodFcn = @(mu, x) 1 ./ (sqrt(2 * pi * sigma^2)) .* exp(-(x - mu).^2 / (2 * sigma^2));
+% 		likelihoodFcn = @(mu, window) prod(1 ./ (sqrt(2 * pi * sigma^2)) .* exp(-(windo - mu).^2 / (2 * sigma^2)));
 			
 		resamplingFcn = @resamplingMeng;
 		
@@ -292,8 +292,9 @@ if PLOT_RESULTS
     plot((tSpan(1:k) .* ones(3, k))', estimates.states(2:end, 1:k)', 'linewidth', 2); 
     legend(stateNames(2:end))
     hold on; set(gca, 'ColorOrderIndex', 1)
-	if ~strcmp(SPIKETIMES, 'load')
+	try
 		plot((tSpan(1:k) .* ones(3, k))', sim(2:end, 1:binwidth:k*binwidth)', ':', 'linewidth', 2); hold off;
+	catch ME
 	end
     xlabel('Time [s]');
     title('Hidden States')
@@ -350,7 +351,8 @@ if PLOT_RESULTS
     end
     xlabel('Time [s]');
 	
-	[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth);  % simulate based on estimated parameters
+	[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth, ...
+		'total_steps', size(sim, 2));  % simulate based on estimated parameters
 end
 
 if exist('outfile', 'var')
