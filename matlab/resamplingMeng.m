@@ -54,6 +54,7 @@ if trigger
 		end
 	end
 	
+	p = p + 1e-6;  % avoid interpolation errors
 	p = p / sum(p); % rescale to probability
 	r = rand(1, N - sum(M));
 	newParts = floor(interp1(cumsum(p), 1:N, r, 'linear', 0)) + 1;
