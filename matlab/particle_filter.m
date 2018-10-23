@@ -13,7 +13,7 @@ M = 5;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;  % Plot particles while algorithm is running
 PLOT_RESULTS = true;  % Create summary plots when analysis is complete
 % STATE_BOUNDS = [-200, 200, -20, 20];
-K_MAX = 1e4;  % Maximum number of time steps
+K_MAX = Inf;  % Maximum number of time steps
 alpha = 0.6;  % particle survival rate during annealing 
 filename = 'pf.gif'; newgif = false;
 % injectedCurrent = pinknoise(K_MAX);
@@ -27,7 +27,8 @@ switch SPIKETIMES
 		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
 		fs = 3e4;	% sampling frequency [Hz]
 	case 'sim'
-		load sim_2e3_noise2_gbVariable.mat
+% 		load sim_2e3_noise2_gbVariable.mat
+		load sim0
 		fs = 1e5; 
 	case 'newSim'
 		switch model
@@ -79,14 +80,15 @@ switch model
 		W = 3;	% window (ms)
 		Vth = 30; % Voltage threshold [mV]
 		
-		delta = 1; % binwidth [ms]
+		delta = dt; % binwidth [ms]
+		sigma = 1;
 		
 		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt);
 		likelihoodFcn = @(window, obsn) ...
-			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
+			likelihood_voltage(window, obsn, sigma);
+% 			likelihoodFcnMeng(window, obsn, W, Vth, delta); 
 % 			likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);
 		sigma = 1;
-% 		likelihoodFcn = @(mu, window) prod(1 ./ (sqrt(2 * pi * sigma^2)) .* exp(-(windo - mu).^2 / (2 * sigma^2)));
 			
 		resamplingFcn = @resamplingMeng;
 		
@@ -99,7 +101,8 @@ binedges = 0:binwidth:(max(spiketimes) + binwidth);
 tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
 obsn = histcounts(spiketimes, binedges);
 % obsnV = mean(reshape(sim(1, :)', binwidth, []));
-obsnV = simV(1, 1:binwidth:end);
+% obsnV = simV(1, 1:binwidth:end);
+obsn = simV(1, :);
 % obsnV = zeros(1, ceil(spiketimes(end)/binwidth) * binwidth);
 % obsnV(spiketimes) = 1;
 % obsnV = conv(obsnV, meanSpike - min(meanSpike), 'same') + min(meanSpike);
@@ -158,8 +161,8 @@ for k = 1:min(K, K_MAX)		% for each observation
 	
 	params = particles.params;
 	window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
-	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
-% 	probability = likelihoodFcn(window(1, :), obsnV(k)); % ... calculate likelihood
+% 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+	probability = likelihoodFcn(window, obsn(k:k+W*binwidth-1)); % ... calculate likelihood
 	
 % 	if M < 1  % if no annealing, use the resampling function
 		trig = obsn(k);
@@ -191,9 +194,9 @@ for k = 1:min(K, K_MAX)		% for each observation
 		prediction = prediction(:, inds); % resample
 		% Update window of V surrounding t_k
 		window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
-		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ...
+% 		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ...
 % 		calculate likelihood base
-% 		probability = likelihoodFcn(window(1, :), obsnV(k)); % ... calculate likelihood based on voltage
+		probability = likelihoodFcn(window, obsn(k:k+W*binwidth-1)); % ... calculate likelihood based on voltage
 
 		
 		wts = particles.weights(inds) .* probability + 1e-6;
@@ -280,7 +283,7 @@ if PLOT_RESULTS
     stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
     plot(tSpan(1:k), estimates.states(1, 1:k), 'Color', colors(2,:));
 	if ~strcmp(SPIKETIMES, 'load')
-		plot(tSpan(1:k), obsnV(1:k), 'Color', colors(1,:))
+		plot(tSpan(1:k), obsn(1:k), 'Color', colors(1,:))
 	end
     plot(tSpan(1:k), ones(1, k), '--', 'Color', .5*[1 1 1]); hold off;
     ylim(1.1*(get(gca,'YLim') - mean(get(gca, 'Ylim'))) + mean(get(gca, 'YLim')));
