@@ -80,7 +80,7 @@ switch model
 		W = 3;	% window (ms)
 		Vth = 30; % Voltage threshold [mV]
 		
-		delta = dt; % binwidth [ms]
+		delta = .3; % binwidth [ms]
 		sigma = 1;
 		
 		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt);
@@ -102,7 +102,8 @@ tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
 obsn = histcounts(spiketimes, binedges);
 % obsnV = mean(reshape(sim(1, :)', binwidth, []));
 % obsnV = simV(1, 1:binwidth:end);
-obsn = simV(1, :);
+obsn = simV(1, 1:binwidth:end);
+tSpan = (1:length(obsn) - W) * delta * 1e-3;
 % obsnV = zeros(1, ceil(spiketimes(end)/binwidth) * binwidth);
 % obsnV(spiketimes) = 1;
 % obsnV = conv(obsnV, meanSpike - min(meanSpike), 'same') + min(meanSpike);
@@ -162,7 +163,7 @@ for k = 1:min(K, K_MAX)		% for each observation
 	params = particles.params;
 	window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
 % 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
-	probability = likelihoodFcn(window, obsn(k:k+W*binwidth-1)); % ... calculate likelihood
+	probability = likelihoodFcn(window(:, :, 1:binwidth:end), obsn(k:k+W-1)); % ... calculate likelihood
 	
 % 	if M < 1  % if no annealing, use the resampling function
 		trig = obsn(k);
@@ -196,7 +197,7 @@ for k = 1:min(K, K_MAX)		% for each observation
 		window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
 % 		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ...
 % 		calculate likelihood base
-		probability = likelihoodFcn(window, obsn(k:k+W*binwidth-1)); % ... calculate likelihood based on voltage
+		probability = likelihoodFcn(window(:, :, 1:binwidth:end), obsn(k:k+W-1)); % ... calculate likelihood based on voltage
 
 		
 		wts = particles.weights(inds) .* probability + 1e-6;
@@ -277,7 +278,7 @@ beep
 %% Plot results
 if PLOT_RESULTS
     colors = lines(max(NUM_PARAMS, 7));
-    k = k-1;
+%     k = k-1;
 
     figure(3); fullwidth(0)
     stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
@@ -338,20 +339,23 @@ if PLOT_RESULTS
 	subplot(2,1,2)
 	plot(estimates.ESS(1:k) * 100); title('ESS%')
 
-    figure(7); clf; fullwidth(numel(fn) > 3)
-    for i = 1:numel(fn)
-		f = fn{i};
-        subplot(numel(fn), 1, i)
-        contourf(tSpan(1:k-1), paramDistX.(f), squeeze(paramDist.(f)(:, 1:k-1)), 'linestyle', 'none')
-        caxis([0 2/N]); % colormap('gray')
-        colorbar()
-		if ~strcmp(SPIKETIMES, 'load')
-			hold on; 
-			plot(tSpan(1:k)', simParams.(f)(1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
-			hold off; 
+	PLOT7 = false;
+	if PLOT7
+		figure(7); clf; fullwidth(numel(fn) > 3)
+		for i = 1:numel(fn)
+			f = fn{i};
+			subplot(numel(fn), 1, i)
+			contourf(tSpan(1:k-1), paramDistX.(f), squeeze(paramDist.(f)(:, 1:k-1)), 'linestyle', 'none')
+			caxis([0 2/N]); % colormap('gray')
+			colorbar()
+			if ~strcmp(SPIKETIMES, 'load')
+				hold on; 
+				plot(tSpan(1:k)', simParams.(f)(1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
+				hold off; 
+			end
+			title([f ' Estimate'])
 		end
-        title([f ' Estimate'])
-    end
+	end
     xlabel('Time [s]');
 	
 	[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth, 'total_steps', size(simV, 2));  % simulate based on estimated parameters
