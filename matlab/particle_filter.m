@@ -11,7 +11,7 @@ N = 2e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
 Nanneal = 2e3;  % number of particles for annealing
 M = 5;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;  % Plot particles while algorithm is running
-PLOT_RESULTS = true;  % Create summary plots when analysis is complete
+PLOT_RESULTS = false;  % Create summary plots when analysis is complete
 % STATE_BOUNDS = [-200, 200, -20, 20];
 K_MAX = Inf;  % Maximum number of time steps
 alpha = 0.6;  % particle survival rate during annealing 
@@ -27,8 +27,13 @@ switch SPIKETIMES
 		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
 		fs = 3e4;	% sampling frequency [Hz]
 	case 'sim'
+<<<<<<< HEAD
  		load sim_2e3_noise2_gbVariable.mat
 %		load sim0
+=======
+		load sim_2e3_noise2_gbVariable.mat
+% 		load sim0
+>>>>>>> e0f8697b360f8af9232f6af94fba092e4c4162cd
 		fs = 1e5; 
 	case 'newSim'
 		switch model
@@ -98,7 +103,7 @@ end
 %% Bin spike times
 binwidth = fs * delta * 1e-3; % samples per bin
 binedges = 0:binwidth:(max(spiketimes) + binwidth);
-tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
+% tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
 obsn = histcounts(spiketimes, binedges);
 % obsnV = mean(reshape(sim(1, :)', binwidth, []));
 % obsnV = simV(1, 1:binwidth:end);
@@ -366,7 +371,7 @@ if exist('outfile', 'var')
    save(outfile);
    print(5, [outfile '_5'], '-dpng')
    if PLOT7
-       print(7, [outfile '_7'], '-dpng')
+	   print(7, [outfile '_7'], '-dpng')
    end
    if strcmp(SPIKETIMES, 'newSim')
 	   print(99, [outfile '_sim'], '-dpng')
