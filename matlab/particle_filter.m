@@ -369,11 +369,13 @@ end
 if exist('outfile', 'var')
 %    save(outfile, 'sim', 'estimates')
    save(outfile);
-   print(5, [outfile '_5'], '-dpng')
-   if PLOT7
-	   print(7, [outfile '_7'], '-dpng')
-   end
-   if strcmp(SPIKETIMES, 'newSim')
-	   print(99, [outfile '_sim'], '-dpng')
+   if PLOT_RESULTS
+	   print(5, [outfile '_5'], '-dpng')
+	   if PLOT7
+		   print(7, [outfile '_7'], '-dpng')
+	   end
+	   if strcmp(SPIKETIMES, 'newSim')
+		   print(99, [outfile '_sim'], '-dpng')
+	   end
    end
 end
