@@ -27,13 +27,8 @@ switch SPIKETIMES
 		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
 		fs = 3e4;	% sampling frequency [Hz]
 	case 'sim'
-<<<<<<< HEAD
- 		load sim_2e3_noise2_gbVariable.mat
-%		load sim0
-=======
 		load sim_2e3_noise2_gbVariable.mat
 % 		load sim0
->>>>>>> e0f8697b360f8af9232f6af94fba092e4c4162cd
 		fs = 1e5; 
 	case 'newSim'
 		switch model
