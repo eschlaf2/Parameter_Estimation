@@ -6,7 +6,7 @@ else
 end
 
 model = 'HH';	% select which model to use
-SPIKETIMES = 'sim'; % simulate ('newSim') or 'load' spike times
+SPIKETIMES = 'load'; % simulate ('newSim') or 'load' spike times
 likelihood = 'spikes';  % voltage or spikes
 N = 2e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
 Nanneal = 2e3;  % number of particles for annealing
@@ -374,7 +374,7 @@ if PLOT_RESULTS
 	end
     xlabel('Time [s]');
 end
-[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth, 'total_steps', size(simV, 2));  % simulate based on estimated parameters
+[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth, 'total_steps', K);  % simulate based on estimated parameters
 
 if exist('outfile', 'var')
 %    save(outfile, 'sim', 'estimates')

@@ -17,7 +17,7 @@ for a = 1:2:length(varargin)
 		case 'total_time'
 			TOTAL_TIME = varargin{a+1} * 1 / dt;
 		case 'total_steps'
-			TOTAL_TIME = varargin{a + 1};
+			TOTAL_TIME = varargin{a + 1} * binwidth;
 	end
 end
 
@@ -29,7 +29,7 @@ switch model
 		u = -10; 
 		s0 = [v; u];
 		
-		noise = 4 * pinknoise(TOTAL_TIME);
+		noise = @(T) 4 * pinknoise(T);
 		transitionFcn = @(state, p) Izh_stateTrnsn(state, p, dt);
 
 		
@@ -40,7 +40,7 @@ switch model
 		B = 0.0326;
 		s0 = [V; n; h; B];
 		
-		noise = 2 * pinknoise(TOTAL_TIME);
+		noise = @(T) 2 * pinknoise(T);
 % 		noise = 0;
 		transitionFcn = @(state, p) HH_stateTrnsn(state, p, dt);
 		
@@ -57,6 +57,7 @@ if exist('estimates','var') && ~isempty(estimates)
 		binwidth = 1;
 	end
 	k = size(estimates.weights, 2);
+% 	TOTAL_TIME = k;
 	for f = fieldnames(estimates.params)'
 		temp = repmat(estimates.params.(f{:})(1:k)', binwidth,1);
 		simParams.(f{:})(1:k * binwidth) = temp(:);
@@ -68,7 +69,7 @@ if exist('estimates','var') && ~isempty(estimates)
 	end
 end
 
-simParams.I = simParams.I + noise;
+simParams.I = simParams.I + noise(TOTAL_TIME);
 
 %% Run Sim
 sim = zeros(numel(s0), TOTAL_TIME); % to hold simulation results
@@ -88,17 +89,4 @@ spiketimes = find(spikes); % spike times in samples
 %% Plot Results
 if ~exist('PLOT_RESULTS', 'var') || PLOT_RESULTS
 	plot_sim(sim, spiketimes, dt, Vth, 100-i);
-	
-%     figure(100-i); fullwidth() % Voltage
-%     ax = subplot(8,1,2:7);
-%     plot(t, sim(1,:)); ylabel('Voltage [mV]'); xlabel('Time [ms]'); 
-%     hold on; plot([0 t(end)], Vth *  [1 1], '--', 'color', .5 * [1 1 1]); hold off
-%     hold on; plot(t(spikes), sim(1,spikes), 'r*'); hold off;
-% 
-%     subplot(8,1,1); % Spike raster
-%     plot([spikeT(:) spikeT(:)]', [zeros(size(spikeT(:))) ones(size(spikeT(:)))]', 'color', lines(1))
-%     xlim(get(ax, 'xlim'))
-%     yticks([]); xticks([]);
-	
-	
 end
