@@ -357,9 +357,8 @@ if PLOT_RESULTS
 		end
 	end
     xlabel('Time [s]');
-	
-	[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth, 'total_steps', size(simV, 2));  % simulate based on estimated parameters
 end
+[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth, 'total_steps', size(simV, 2));  % simulate based on estimated parameters
 
 if exist('outfile', 'var')
 %    save(outfile, 'sim', 'estimates')
@@ -374,3 +373,5 @@ if exist('outfile', 'var')
 	   end
    end
 end
+
+disp('success')
