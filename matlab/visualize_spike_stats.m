@@ -27,13 +27,13 @@ axis('tight')
 %% histogram of ISIs
 isi = diff(st);
 subplot(7, 4, [5, 6, 9, 10] + 4)
-histogram(isi, 0:10:max(isi));
+histogram(isi, 0:10:max(isi), 'edgecolor', 'none');
 title('ISIs (10 ms bins)')
 ylabel('Counts')
 xlabel('ISI length (ms)')
 
 subplot(7, 4, [7 8 11 12] + 4)
-histogram(isi, 0:1:200);
+histogram(isi, 0:1:200, 'edgecolor', 'none');
 title('ISIs (1 ms bins)')
 ylabel('Counts')
 xlabel('ISI length (ms)')
@@ -56,7 +56,7 @@ end
 nlags = 100;
 [acf, lags] = xcorr(bsi - mean(bsi), nlags, 'coeff');
 subplot(7, 4, [21 22 25 26])
-stem(lags(lags > 0), acf(lags > 0))
+stem(lags(lags > 0), acf(lags > 0), 'markerfacecolor', 'auto')
 hold on
 plot([1 nlags; 1 nlags]', 1.96 / sqrt(length(bsi)) * [1 1; -1 -1]', 'r--')
 hold off
@@ -66,7 +66,7 @@ ylabel('CC')
 
 [acfI, lagsI] = xcorr(isi - mean(isi), nlags, 'coeff');
 subplot(7, 4, [23 24 27 28])
-stem(lagsI(lagsI > 0), acfI(lagsI >0));
+stem(lagsI(lagsI > 0), acfI(lagsI >0), 'markerfacecolor', 'auto');
 hold on
 plot([1 nlags; 1 nlags]', 1.96 / sqrt(length(isi)) * [1 1; -1 -1]', 'r--')
 hold off
