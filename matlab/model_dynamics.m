@@ -1,13 +1,14 @@
-function F = model_dynamics(~, stateMat, paramStruct, model)
+function F = model_dynamics(~, stateMat, paramStruct, model, p)
 % state should be a matrix
 
-defaultModel = 'HH';
 
-if ~exist('model', 'var')
-	model = defaultModel;
+if ~exist('model', 'var') || isempty(model)
+	model = 'HH';
 end
 
-p = default_params(model);
+if ~exist('p', 'var') || isempty(p)
+	p = default_params(model);
+end
 
 
 switch model

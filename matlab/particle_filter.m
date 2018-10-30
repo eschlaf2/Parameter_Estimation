@@ -6,44 +6,19 @@ else
 end
 
 model = 'HH';	% select which model to use
-SPIKETIMES = 'load'; % simulate ('newSim') or 'load' spike times
-likelihood = 'spikes';  % voltage or spikes
+SPIKETIMES = 'sim'; % simulate ('newSim') or 'load' spike times
+likelihood = 'voltage';  % 'voltage' or 'spikes'
+spike_method = 'Vth';  % 'Vth' or 'diff'
 N = 2e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
 Nanneal = 2e3;  % number of particles for annealing
 M = 5;  % annealing layers (try using only 200 particles with 10 layers)
 PLOT = false;  % Plot particles while algorithm is running
-PLOT_RESULTS = false;  % Create summary plots when analysis is complete
-% STATE_BOUNDS = [-200, 200, -20, 20];
-K_MAX = Inf;  % Maximum number of time steps
+PLOT_RESULTS = true;  % Create summary plots when analysis is complete
+K_MAX = 100;  % Maximum number of time steps
 alpha = 0.6;  % particle survival rate during annealing 
 filename = 'pf.gif'; newgif = false;
+PARAMS = getfield(load('alternate_params.mat'), 'p');  % default_params(model);
 % injectedCurrent = pinknoise(K_MAX);
-
-%% Load firing times
- 
-switch SPIKETIMES
-	case 'load'
-		load firings.mat	% sorted and curated firings from binary_small.dat (preictal); 
-							% sorting by MountainSort
-		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
-		fs = 3e4;	% sampling frequency [Hz]
-	case 'sim'
-		load sim_2e3_noise2_gbVariable.mat
-% 		load sim0
-		fs = 1e5; 
-	case 'newSim'
-		switch model
-			case 'HH'
-				Vth = 30;
-		% 		HHSim;
-				fs = 1e5;
-			case 'Izh'
-				Vth = 20;
-				fs = 1e5;
-		end
-		[simV, spiketimes, simParams] = modelSim(model, Vth);
-		meanSpike = mean(cell2mat(arrayfun(@(i) simV(1, i - 50:i+100), spiketimes, 'uni', 0)'));
-end
 
 %% Select model
 switch model
@@ -57,22 +32,26 @@ switch model
 		dt = 0.01;	% integration step [ms]
 		
 		W = 3;	% window (ms)
-		
-		Vth = 20; % Voltage threshold [mV]
-		
+		switch spike_method  % threshold for determining spike times
+			case 'Vth'
+				thresh = 20;
+			case 'diff'
+				thresh = 100 * dt;
+		end
+				
 		delta = 1; % binwidth [ms]
 		
-		transitionFcn = @(states, particles) Izh_stateTrnsn(states, particles, dt);
+		transitionFcn = @(states, particles) Izh_stateTrnsn(states, particles, dt, PARAMS);
 		switch likelihood
 			case 'spikes'
 				likelihoodFcn = @(window, obsn) ...
-					likelihoodFcnMeng(window, obsn, W, Vth, delta); 
+					likelihoodFcnMeng(window, obsn, W, thresh, delta); 
 			case 'voltage'
 				likelihoodFcn = @(window, obsn) ...
 					likelihood_voltage(window, obsn, sigma);
 			case '2011'
 				likelihoodFcn = @(window, obsn) ...
-					likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);% 			likelihood_voltage(window, obsn, sigma);
+					likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), thresh);% 			likelihood_voltage(window, obsn, sigma);
 		end
 			
 		resamplingFcn = @resamplingMeng;
@@ -87,22 +66,30 @@ switch model
 		dt = 0.01;	% integration step [ms]
 		
 		W = 3;	% window (ms)
-		Vth = 30; % Voltage threshold [mV]
+		switch spike_method  % threshold for deterimining spike times
+			case 'Vth'
+				thresh = 30;
+			case 'diff'
+				thresh = 30 * dt;
+		end
 		
-		delta = .3; % binwidth [ms]
+		delta = 1; % binwidth [ms]
+		if strcmp(likelihood, 'voltage')
+			delta = .3;
+		end
 		sigma = 1;
 		
-		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt);
+		transitionFcn = @(states, particles) HH_stateTrnsn(states, particles, dt, PARAMS);
 		switch likelihood
 			case 'spikes'
 				likelihoodFcn = @(window, obsn) ...
-					likelihoodFcnMeng(window, obsn, W, Vth, delta); 
+					likelihoodFcnMeng(window, obsn, W, thresh, delta, spike_method); 
 			case 'voltage'
 				likelihoodFcn = @(window, obsn) ...
 					likelihood_voltage(window, obsn, sigma);
-			case '2011'
+			case '2011'  % this will likely need to be fixed if you ever want to use it again
 				likelihoodFcn = @(window, obsn) ...
-					likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), Vth);% 			likelihood_voltage(window, obsn, sigma);
+					likelihoodFcnMeng2011(window, obsn, ((dt:dt:W) - W/2), thresh);% 			likelihood_voltage(window, obsn, sigma);
 		end
 
 		sigma = 1;
@@ -112,13 +99,36 @@ switch model
 		
 end
 
+%% Load firing times
+ 
+switch SPIKETIMES
+	case 'load'
+		load firings.mat	% sorted and curated firings from binary_small.dat (preictal); 
+							% sorting by MountainSort
+		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
+		fs = 3e4;	% sampling frequency [Hz]
+	case 'sim'
+		load sim_2e3_noise2_gbVariable.mat
+% 		load sim0
+		fs = 1e5; 
+	case 'newSim'
+		fs = 1e5;
+		[simV, spiketimes, simParams] = modelSim(model, thresh, [], [], spike_method);
+		meanSpike = mean(cell2mat(arrayfun(@(i) simV(1, i - 50:i+100), spiketimes, 'uni', 0)'));
+end
+
+
 %% Bin spike times
 binwidth = fs * delta * 1e-3; % samples per bin
 binedges = 0:binwidth:(max(spiketimes) + binwidth);
 % tSpan = (1: length(binedges)-1) * delta * 1e-3;	% time [s]
-obsn = histcounts(spiketimes, binedges);
+switch likelihood
+	case 'spikes'
+		obsn = histcounts(spiketimes, binedges);
+	case 'voltage'
+		obsn = simV(1, 1:binwidth:end);
+end
 
-% obsn = simV(1, 1:binwidth:end);
 tSpan = (1:length(obsn) - W) * delta * 1e-3;
 % obsnV = zeros(1, ceil(spiketimes(end)/binwidth) * binwidth);
 % obsnV(spiketimes) = 1;
@@ -168,17 +178,13 @@ for k = 1:min(K, K_MAX)		% for each observation
 	prediction = particles.states;
 	for i = 1:binwidth  % for each integration step within a bin (advance to t + 1)
 		prediction = transitionFcn(prediction, particles.params);	% ... integrate states
-% 		try
-% 			prediction(prediction < STATE_BOUNDS(1)) = STATE_BOUNDS(1);
-% 			prediction(prediction > STATE_BOUNDS(2)) = STATE_BOUNDS(2);
-% 		catch ME
-% 		end
 	end
 	particles.states = prediction;
 	
 	params = particles.params;
 	window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
-	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+% 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
+	probability = likelihoodFcn(window(:, :, 1:binwidth:end), (obsn(k:k+W-1))); % ... calculate likelihood
 % 	probability = likelihoodFcn(window(:, :, 1:binwidth:end), obsn(k:k+W-1)); % ... calculate likelihood
 	
 % 	if M < 1  % if no annealing, use the resampling function
@@ -211,7 +217,8 @@ for k = 1:min(K, K_MAX)		% for each observation
 		prediction = prediction(:, inds); % resample
 		% Update window of V surrounding t_k
 		window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
-		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ...
+% 		probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ...
+		probability = likelihoodFcn(window(:, :, 1:binwidth:end), obsn(k:k+W-1)); % ...
 % 		calculate likelihood base
 % 		probability = likelihoodFcn(window(:, :, 1:binwidth:end), obsn(k:k+W-1)); % ... calculate likelihood based on voltage
 
@@ -300,7 +307,7 @@ if PLOT_RESULTS
     stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
     plot(tSpan(1:k), estimates.states(1, 1:k), 'Color', colors(2,:));
 	if ~strcmp(SPIKETIMES, 'load')
-		plot(tSpan(1:k), obsn(1:k), 'Color', colors(1,:))
+		plot(tSpan(1:k), simV(1, 1:binwidth:k*binwidth), 'Color', colors(1,:))
 	end
     plot(tSpan(1:k), ones(1, k), '--', 'Color', .5*[1 1 1]); hold off;
     ylim(1.1*(get(gca,'YLim') - mean(get(gca, 'Ylim'))) + mean(get(gca, 'YLim')));
@@ -374,7 +381,7 @@ if PLOT_RESULTS
 	end
     xlabel('Time [s]');
 end
-[simEst, stEst, ~] = modelSim(model, Vth, estimates, binwidth, 'total_steps', K);  % simulate based on estimated parameters
+[simEst, stEst, simParamsEst] = modelSim(model, thresh, estimates, binwidth, spike_method, PARAMS, 'total_steps', K);  % simulate based on estimated parameters
 
 if exist('outfile', 'var')
 %    save(outfile, 'sim', 'estimates')

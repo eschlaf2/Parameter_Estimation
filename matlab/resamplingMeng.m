@@ -61,7 +61,7 @@ if trigger
 	inds = [inds, newParts];
 	particles.weights = 1/N * ones(1, N);
 	
-elseif 1  % no bootstrap
+elseif 0  % no bootstrap
 	inds = 1:N;
 else  % bootstrap
 	try 

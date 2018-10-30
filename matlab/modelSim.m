@@ -1,12 +1,18 @@
-function [sim, spiketimes, simParams] = modelSim(model, Vth, estimates, binwidth, varargin)
+function [sim, spiketimes, simParams] = modelSim(model, thresh, estimates, binwidth, spike_method, p, varargin)
 
 if ~exist('model', 'var') || isempty(model)
 	model = 'HH';
 end
-if ~exist('Vth', 'var') || isempty(Vth)
-	Vth = 30;
+if ~exist('thresh', 'var') || isempty(thresh)
+	thresh = 30;
 end
-
+if ~exist('spike_method', 'var') || isempty(spike_method)
+	spike_method = 'diff';
+	thresh = 1;
+end
+if ~exist('p', 'var') || isempty(p)
+	p = default_params(model);
+end
 dt = 1e-2;
 TOTAL_TIME = 1e3 * 1/dt; % time steps to simulate (ms * fs)
 
@@ -19,9 +25,10 @@ for a = 1:2:length(varargin)
 		case 'total_steps'
 			TOTAL_TIME = varargin{a + 1} * binwidth;
 	end
+	if isfield(p, varargin{a})
+		p.(varargin{a}) = varargin{a+1};
+	end
 end
-
-p = default_params(model);
 
 switch model
 	case 'Izh'
@@ -30,7 +37,7 @@ switch model
 		s0 = [v; u];
 		
 		noise = @(T) 4 * pinknoise(T);
-		transitionFcn = @(state, p) Izh_stateTrnsn(state, p, dt);
+		transitionFcn = @(state, pStruct) Izh_stateTrnsn(state, pStruct, dt, p);
 
 		
 	case 'HH'
@@ -42,7 +49,7 @@ switch model
 		
 		noise = @(T) 2 * pinknoise(T);
 % 		noise = 0;
-		transitionFcn = @(state, p) HH_stateTrnsn(state, p, dt);
+		transitionFcn = @(state, pStruct) HH_stateTrnsn(state, pStruct, dt, p);
 		
 end
 
@@ -82,11 +89,9 @@ end
 t = (1:TOTAL_TIME) * dt;
 
 %% Get spiketimes
-spikes = [false logical((sim(1,1:end-1) < Vth) .* sim(1,2:end) > Vth)];
-spiketimes = find(spikes); % spike times in samples
-% spikeT = t(spikes);  % spike times in units of dt
+spiketimes = get_spiketimes(sim(1, :), thresh, spike_method);
 
 %% Plot Results
 if ~exist('PLOT_RESULTS', 'var') || PLOT_RESULTS
-	plot_sim(sim, spiketimes, dt, Vth, 100-i);
+	plot_sim(sim, spiketimes, dt, thresh, 100-i);
 end
