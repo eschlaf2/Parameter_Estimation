@@ -1,24 +1,13 @@
 %% Set parameters
 if ~exist('outfile', 'var')
 	clear
+	pf_settings;
 else
 	rng(sum(double(outfile)));
+% 	pf_settings should be called in mbatch script for remote runs. This way
+% 	the settings can be stored in individual files so it's easy to find out
+% 	later what you ran.
 end
-
-model = 'HH';	% select which model to use
-SPIKETIMES = 'sim'; % simulate ('newSim') or 'load' spike times
-likelihood = 'spikes';  % 'voltage' or 'spikes'
-spike_method = 'Vth';  % 'Vth' or 'diff'
-N = 2e3;  % number of particles; Meng used 1e4, but start at 1e3 for speed
-Nanneal = 2e3;  % number of particles for annealing
-M = 5;  % annealing layers (try using only 200 particles with 10 layers)
-PLOT = false;  % Plot particles while algorithm is running
-PLOT_RESULTS = true;  % Create summary plots when analysis is complete
-K_MAX = Inf;  % Maximum number of time steps
-alpha = 0.6;  % particle survival rate during annealing 
-filename = 'pf.gif'; newgif = false;
-PARAMS = getfield(load('alternate_params.mat'), 'p');  % default_params(model);
-% injectedCurrent = pinknoise(K_MAX);
 
 %% Select model
 switch model
@@ -162,10 +151,11 @@ particles.pNoise = structfun(@(x) x(4) .* range(x(1:2)), boundsStruct); % noise 
 
 % paramDistX = cell2mat(arrayfun(@(i) linspace(boundsStruct(i, 1), boundsStruct(i, 2), 1e3), pEst, ...
 % 	'UniformOutput', false));
-paramDist = structfun(@(x) zeros(1e3, K, 'single'), boundsStruct, 'uni', 0); % for holding (interpolated) posteriors
+% paramDist = structfun(@(x) zeros(1e3, K, 'single'), boundsStruct, 'uni', 0); % for holding (interpolated) posteriors
+% 
+% paramDistX = structfun(@(x) linspace(x(1), x(2), 1e3), boundsStruct, ...
+% 	'UniformOutput', false);
 
-paramDistX = structfun(@(x) linspace(x(1), x(2), 1e3), boundsStruct, ...
-	'UniformOutput', false);
 triggered = zeros(1, K);
 beta = ones(M, 1);  % Initial exponents for annealing
 P0 = diag(particles.pNoise);  % Covariance matrix - see APF paper for ideas on how to improve this
@@ -246,8 +236,8 @@ for k = 1:min(K, K_MAX)		% for each observation
 	for f = fn
 		f = f{:};
 		
-		paramDist.(f)(:, k) = interp1(double(particles.params.(f)), particles.weights, ...
-			paramDistX.(f), 'linear', 0);  % ... save the distribution
+		% paramDist.(f)(:, k) = interp1(double(particles.params.(f)), particles.weights, ...
+			% paramDistX.(f), 'linear', 0);  % ... save the distribution
 		
 		% Get next estimates using weighted mean
 		estimates.params.(f)(k) = weighted_mean(particles.params.(f));
@@ -362,24 +352,24 @@ if PLOT_RESULTS
 	subplot(2,1,2)
 	plot(estimates.ESS(1:k) * 100); title('ESS%')
 
-	PLOT7 = false;
-	if PLOT7
-		figure(7); clf; fullwidth(numel(fn) > 3)
-		for i = 1:numel(fn)
-			f = fn{i};
-			subplot(numel(fn), 1, i)
-			contourf(tSpan(1:k-1), paramDistX.(f), squeeze(paramDist.(f)(:, 1:k-1)), 'linestyle', 'none')
-			caxis([0 2/N]); % colormap('gray')
-			colorbar()
-			if ~strcmp(SPIKETIMES, 'load')
-				hold on; 
-				plot(tSpan(1:k)', simParams.(f)(1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
-				hold off; 
-			end
-			title([f ' Estimate'])
-		end
-	end
-    xlabel('Time [s]');
+% 	PLOT7 = false;
+% 	if PLOT7
+% 		figure(7); clf; fullwidth(numel(fn) > 3)
+% 		for i = 1:numel(fn)
+% 			f = fn{i};
+% 			subplot(numel(fn), 1, i)
+% 			contourf(tSpan(1:k-1), paramDistX.(f), squeeze(paramDist.(f)(:, 1:k-1)), 'linestyle', 'none')
+% 			caxis([0 2/N]); % colormap('gray')
+% 			colorbar()
+% 			if ~strcmp(SPIKETIMES, 'load')
+% 				hold on; 
+% 				plot(tSpan(1:k)', simParams.(f)(1:binwidth:k*binwidth)', 'r--', 'linewidth', 3); 
+% 				hold off; 
+% 			end
+% 			title([f ' Estimate'])
+% 		end
+% 	end
+%     xlabel('Time [s]');
 end
 [simEst, stEst, simParamsEst] = modelSim(model, thresh, estimates, binwidth, spike_method, PARAMS, 'total_steps', K);  % simulate based on estimated parameters
 
