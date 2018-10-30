@@ -20,9 +20,9 @@ for a = 1:2:length(varargin)
 	switch lower(varargin{a})
 		case 'dt'
 			dt = varargin{a+1};
-		case 'total_time'
+		case 'total_time'  % length of time to simulate (ms)
 			TOTAL_TIME = varargin{a+1} * 1 / dt;
-		case 'total_steps'
+		case 'total_steps'  % number of time bins to simulate
 			TOTAL_TIME = varargin{a + 1} * binwidth;
 	end
 	if isfield(p, varargin{a})
