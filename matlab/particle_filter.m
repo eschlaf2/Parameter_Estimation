@@ -1,9 +1,11 @@
 %% Set parameters
-if ~exist('outfile', 'var')
+if ~exist('outfile', 'var')  % local run
 	clear
 	pf_settings;
-else
+	PLOT_RESULTS = true;
+else                         % remote run
 	rng(sum(double(outfile)));
+	PLOT_RESULTS = false;
 % 	pf_settings should be called in mbatch script for remote runs. This way
 % 	the settings can be stored in individual files so it's easy to find out
 % 	later what you ran.
