@@ -16,7 +16,6 @@ switch model
 	case 'why'	% place holder
 		why
 	case 'Izh'
-		[s0, boundsStruct] = Izh_stateBounds();
 		
 		stateNames = {'v', 'u'};
 		
@@ -49,7 +48,6 @@ switch model
 		
 		
 	case 'HH'	% Hodgkin-Huxley
-		[s0, boundsStruct] = HH_stateBounds(); % get initial conditions and parameter bounds
 		
 		stateNames = {'V', 'n', 'h', 'B'};
 		

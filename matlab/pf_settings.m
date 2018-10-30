@@ -12,6 +12,8 @@ alpha =          0.6;			% particle survival rate during annealing
 PARAMS =         default_params(model);  % Use default parameters for those not being estimated
 % PARAMS =         getfield(load('alternate_params.mat'), 'p');  % Use non-default parameters 
 
+[s0, boundsStruct] = HH_stateBounds(); % get initial conditions and parameter bounds
+
 %% 
 PLOT =           false;			% Plot particles while algorithm is running
 % filename =       'pf.gif'; newgif = false;
