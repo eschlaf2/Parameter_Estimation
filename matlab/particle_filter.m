@@ -290,6 +290,13 @@ end
 
 beep
 
+[simEst, stEst, simParamsEst] = modelSim(model, thresh, estimates, binwidth, spike_method, PARAMS, 'total_steps', K);  % simulate based on estimated parameters
+
+if exist('outfile', 'var')
+	save(outfile)
+	disp('success')
+end
+
 %% Plot results
 if PLOT_RESULTS
     colors = lines(max(NUM_PARAMS, 7));
@@ -373,11 +380,10 @@ if PLOT_RESULTS
 % 	end
 %     xlabel('Time [s]');
 end
-[simEst, stEst, simParamsEst] = modelSim(model, thresh, estimates, binwidth, spike_method, PARAMS, 'total_steps', K);  % simulate based on estimated parameters
+
 
 if exist('outfile', 'var')
 %    save(outfile, 'sim', 'estimates')
-   save(outfile);
    if PLOT_RESULTS
 	   print(5, [outfile '_5'], '-dpng')
 	   if PLOT7
