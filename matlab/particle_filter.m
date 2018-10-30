@@ -89,20 +89,20 @@ switch model
 end
 
 %% Load firing times
- 
+fs = 1e5; 
 switch SPIKETIMES
 	case 'load'
 		load firings.mat	% sorted and curated firings from binary_small.dat (preictal); 
 							% sorting by MountainSort
 		spiketimes = firings(2,firings(3,:) == 95);	% spike times from unit 95
 		fs = 3e4;	% sampling frequency [Hz]
-	case 'sim'
-% 		load sim_2e3_noise2_gbVariable.mat
+	case 'sim0'
+		load sim0
+	case 'sim1'
+		load sim_2e3_noise2_gbVariable.mat
+	case 'sim2'
 		load sim1_15e2ms_defaultParams.mat
-% 		load sim0
-		fs = 1e5; 
 	case 'newSim'
-		fs = 1e5;
 		[simV, spiketimes, simParams] = modelSim(model, thresh, [], [], ...
 			spike_method, [], 'total_time', 1500);
 % 		meanSpike = mean(cell2mat(arrayfun(@(i) simV(1, i - 50:i+100), spiketimes, 'uni', 0)'));
