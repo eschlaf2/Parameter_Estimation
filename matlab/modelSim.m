@@ -53,9 +53,9 @@ switch model
 		
 end
 
-% Create time series for each paramter
+% Create time series for each parameter
 simParams = structfun(@(x) x * ones(1, TOTAL_TIME, 'single'), p, 'Uni', 0);
-simParams.gB = linspace(0.5, 6, TOTAL_TIME);
+% simParams.gB = linspace(0.5, 6, TOTAL_TIME);
 
 % Use estimated parameters if given
 i = 1;
