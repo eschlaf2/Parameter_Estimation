@@ -3,6 +3,7 @@ if ~exist('outfile', 'var')  % local run
 	clear
 	pf_settings;
 	PLOT_RESULTS = true;
+	outfile = [];
 else                         % remote run
 	rng(sum(double(outfile)));
 	PLOT_RESULTS = false;
@@ -291,8 +292,9 @@ end
 beep
 
 [simEst, stEst, simParamsEst] = modelSim(model, thresh, estimates, binwidth, spike_method, PARAMS, 'total_steps', K);  % simulate based on estimated parameters
+res = compare_spiketimes(spiketimes, stEst, dt, outfile, PLOT_RESULTS);
 
-if exist('outfile', 'var')
+if ~isempty(outfile)
 	save(outfile)
 	disp('success')
 end
@@ -382,11 +384,10 @@ if PLOT_RESULTS
 end
 
 
-if exist('outfile', 'var')
-%    save(outfile, 'sim', 'estimates')
+if ~isempty(outfile)
    if PLOT_RESULTS
 	   print(5, [outfile '_5'], '-dpng')
-	   if PLOT7
+	   if exist('PLOT7', 'var') && PLOT7
 		   print(7, [outfile '_7'], '-dpng')
 	   end
 	   if strcmp(SPIKETIMES, 'newSim')
