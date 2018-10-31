@@ -1,6 +1,6 @@
 % function [] = extract_parameter_estimates()
 
-res = struct();  % store all results in a structure
+result = struct();  % store all results in a structure
 load('1', 'spiketimes');
 
 % load each trial and store the results in res
@@ -9,13 +9,13 @@ N = size(dir('*.mat'), 1);
 for ii = 1:N
 	fname = num2str(ii);
 	try
-		load(fname, 'estimates', 'stEst', 'dt');	
+		load(fname, 'estimates', 'res');	
 		for f = fieldnames(estimates.params)'
 			param = f{:};
-			res.(param){ii} = estimates.params.(param);
+			result.(param){ii} = estimates.params.(param);
 		end
-		res.compare{ii} = compare_spiketimes(spiketimes, stEst, dt);
-		clear estimates stEst dt
+		result.compare{ii} = res;
+		clear estimates 
 		fprintf('\b\b\b\b%02d%%\n', round(ii / N * 100))
 	catch ME
 % 		display(['Skipping file: ' fname])
