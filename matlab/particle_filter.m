@@ -1,10 +1,11 @@
 %% Set parameters
-if ~exist('outfile', 'var')  % local run
+if ~exist('outfile', 'var')  || isempty(outfile)  % local run
 	clear
 	pf_settings;
 	PLOT_RESULTS = true;
 	outfile = [];
 else                         % remote run
+	disp(outfile);
 	rng(sum(double(outfile)));
 	PLOT_RESULTS = false;
 % 	pf_settings should be called in mbatch script for remote runs. This way
@@ -384,15 +385,13 @@ if PLOT_RESULTS
 end
 
 
-if ~isempty(outfile)
-   if PLOT_RESULTS
-	   print(5, [outfile '_5'], '-dpng')
-	   if exist('PLOT7', 'var') && PLOT7
-		   print(7, [outfile '_7'], '-dpng')
-	   end
-	   if strcmp(SPIKETIMES, 'newSim')
-		   print(99, [outfile '_sim'], '-dpng')
-	   end
+if ~isempty(outfile) && PLOT_RESULTS
+   print(5, [outfile '_5'], '-dpng')
+   if exist('PLOT7', 'var') && PLOT7
+	   print(7, [outfile '_7'], '-dpng')
+   end
+   if strcmp(SPIKETIMES, 'newSim')
+	   print(99, [outfile '_sim'], '-dpng')
    end
 end
 
