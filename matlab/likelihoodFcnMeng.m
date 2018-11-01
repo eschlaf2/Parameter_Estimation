@@ -19,11 +19,12 @@ v = squeeze(window(1, :, :))'; % Keep only the voltage of each particle
 % spikes = sum(diff(v > Vth) > 0);
 spikes = arrayfun(@(i) numel(get_spiketimes(v(:, i), thresh, method)), 1:N);
 % lambda = h * 1./(abs(spikes - observation).^2 + 1);
-lambda = h * ones(size(spikes));
+lambda = h * (spikes == 1);
 
 % lambda = h * ones(1, N);	% Compute lambda_k of each particle
 % lambda(window(1,:) >= Vth) = b;
-lambda(all(v <= thresh)) = b;
+% lambda(all(v <= thresh)) = b;
+lambda(lambda == 0) = b;
 
 % lambda = h * ones(1, N);
 % lambda = h * (crossings == observation);
