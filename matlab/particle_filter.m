@@ -309,7 +309,7 @@ if PLOT_RESULTS
     colors = lines(max(NUM_PARAMS, 7));
 %     k = k-1;
 
-    figure(3); fullwidth(0)
+    figure(3); clf; fullwidth(0)
     stem(tSpan(obsn(1:k) > 0), obsn(obsn(1:k) > 0)', 'k', 'linewidth', 2); hold on;
     plot(tSpan(1:k), estimates.states(1, 1:k), 'Color', colors(2,:));
 	if ~strcmp(SPIKETIMES, 'load')
@@ -321,7 +321,7 @@ if PLOT_RESULTS
     xlabel('Time [s]'); ylabel('Voltage [mV]');
     title('Voltage')
 
-    figure(4); fullwidth()
+    figure(4); clf; fullwidth()
     plot((tSpan(1:k) .* ones(3, k))', estimates.states(2:end, 1:k)', 'linewidth', 2); 
     legend(stateNames(2:end))
     hold on; set(gca, 'ColorOrderIndex', 1)

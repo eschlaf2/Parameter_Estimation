@@ -20,7 +20,7 @@ switch model
 		p.VBth = -2.2;
 		p.SB = 9.6;
 		p.tauB = 64;
-		p.I = -2;
+		p.I = 0;
 		p.EK = -95;
 		p.gK = 7;
 		p.mNoise = 0;
