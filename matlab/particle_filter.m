@@ -173,15 +173,16 @@ for k = 1:min(K, K_MAX)		% for each observation
 	for i = 1:binwidth  % for each integration step within a bin (advance to t + 1)
 		prediction = transitionFcn(prediction, particles.params);	% ... integrate states
 % 		prediction(:, abs(prediction(1,:)) > 100) = [];
-		prediction(1, prediction(1,:) > 100) = 100;
-		prediction(1, prediction(1,:) < -100) = -100;
 	end
+	prediction(1, prediction(1,:) > 100) = 100;
+	prediction(1, prediction(1,:) < -100) = -100;
 	particles.states = prediction;
 	
 	params = particles.params;
 	window = updateWindow(prediction, max(W*binwidth, 1), @(s) transitionFcn(s, params));
 % 	probability = likelihoodFcn(window, sum(obsn(k:k+W-1))); % ... calculate likelihood
 	probability = likelihoodFcn(window(:, :, 1:binwidth:end), (obsn(k:k+W-1))); % ... calculate likelihood
+	probability(abs(prediction(1,:)) >= 100) = 0;
 % 	probability = likelihoodFcn(window(:, :, 1:binwidth:end), obsn(k:k+W-1)); % ... calculate likelihood
 	
 % 	if M < 1  % if no annealing, use the resampling function
