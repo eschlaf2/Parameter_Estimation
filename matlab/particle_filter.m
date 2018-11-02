@@ -12,9 +12,8 @@ else                         % remote run
 % 	the settings can be stored in individual files so it's easy to find out
 % 	later what you ran.
 end
-if gpuDeviceCount > 0
-	GPU = true;
-end
+GPU = gpuDeviceCount > 0;
+
 
 %% Select model
 switch model
@@ -144,9 +143,6 @@ fn = fieldnames(boundsStruct)';
 % Initialize parameter particles
 particles.params = structfun(@(x) unifrnd(x(1), x(2), 1, N), boundsStruct, ...
 	'uniformoutput', false);
-if GPU
-	particles = gpuArray(particles);
-end
 
 % Initialize estimated states, weights, first prior
 estimates.states = zeros(NUM_STATES, K); % for holding estimates
@@ -175,7 +171,11 @@ ESS = 1;
 %% Run PF
 for k = 1:min(K, K_MAX)		% for each observation
 	
-	prediction = particles.states;
+	if GPU
+		prediction = gpuArray(particles.states);
+	else
+		prediction = particles.states;
+	end
 	for i = 1:binwidth  % for each integration step within a bin (advance to t + 1)
 		prediction = transitionFcn(prediction, particles.params);	% ... integrate states
 % 		prediction(:, abs(prediction(1,:)) > 100) = [];
