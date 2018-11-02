@@ -172,6 +172,9 @@ for k = 1:min(K, K_MAX)		% for each observation
 	prediction = particles.states;
 	for i = 1:binwidth  % for each integration step within a bin (advance to t + 1)
 		prediction = transitionFcn(prediction, particles.params);	% ... integrate states
+% 		prediction(:, abs(prediction(1,:)) > 100) = [];
+		prediction(1, prediction(1,:) > 100) = 100;
+		prediction(1, prediction(1,:) < -100) = -100;
 	end
 	particles.states = prediction;
 	
