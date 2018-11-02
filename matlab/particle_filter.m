@@ -168,14 +168,15 @@ P0 = diag(particles.pNoise);  % Covariance matrix - see APF paper for ideas on h
 P = @(m, i) particles.pNoise(i) * alpha ^ m;
 ESS = 1;
 
+if GPU
+	prediction = gpuArray(particles.states);
+end
+
 %% Run PF
 for k = 1:min(K, K_MAX)		% for each observation
 	
-	if GPU
-		prediction = gpuArray(particles.states);
-	else
-		prediction = particles.states;
-	end
+	prediction = particles.states;
+	
 	for i = 1:binwidth  % for each integration step within a bin (advance to t + 1)
 		prediction = transitionFcn(prediction, particles.params);	% ... integrate states
 % 		prediction(:, abs(prediction(1,:)) > 100) = [];
