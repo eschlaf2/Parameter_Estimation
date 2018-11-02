@@ -12,6 +12,9 @@ else                         % remote run
 % 	the settings can be stored in individual files so it's easy to find out
 % 	later what you ran.
 end
+if gpuDeviceCount > 0
+	GPU = true;
+end
 
 %% Select model
 switch model
@@ -141,6 +144,9 @@ fn = fieldnames(boundsStruct)';
 % Initialize parameter particles
 particles.params = structfun(@(x) unifrnd(x(1), x(2), 1, N), boundsStruct, ...
 	'uniformoutput', false);
+if GPU
+	particles = gpuArray(particles);
+end
 
 % Initialize estimated states, weights, first prior
 estimates.states = zeros(NUM_STATES, K); % for holding estimates
