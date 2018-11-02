@@ -301,7 +301,7 @@ end
 
 beep
 
-[simEst, stEst, simParamsEst] = modelSim(model, thresh, estimates, binwidth, spike_method, PARAMS, 'total_steps', K);  % simulate based on estimated parameters
+[simEst, stEst, simParamsEst] = modelSim(model, thresh, estimates, binwidth, spike_method, PARAMS, 'total_steps', k, 'dt', 1/fs*1e3);  % simulate based on estimated parameters
 res = compare_spiketimes(spiketimes, stEst, dt, outfile, PLOT_RESULTS);
 
 if ~isempty(outfile)

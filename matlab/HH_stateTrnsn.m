@@ -17,7 +17,7 @@ if any(big_slopes)  % Use ode45 to integrate more slowly
 	for s = find(big_slopes)
 		subset = structfun(@(x) x(s), paramStruct, 'uni', 0);
 		[~, temp] = ode45(@(t, y) model_dynamics(t, y, subset, 'HH', p), ...
-			[0 delta], stateMat(:, s), options);
+			single([0 delta]), stateMat(:, s), options);
 		dF(:, s) = temp(end, :)' - stateMat(:, s);
 	end
 end

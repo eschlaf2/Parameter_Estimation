@@ -22,7 +22,9 @@ for a = 1:2:length(varargin)
 			dt = varargin{a+1};
 		case 'total_time'  % length of time to simulate (ms)
 			TOTAL_TIME = varargin{a+1} * 1 / dt;
+			TOTAL_STEPS = int(TOTAL_TIME / binwidth);
 		case 'total_steps'  % number of time bins to simulate
+			TOTAL_STEPS = varargin{a + 1};
 			TOTAL_TIME = varargin{a + 1} * binwidth;
 	end
 	if isfield(p, varargin{a})
@@ -63,7 +65,7 @@ if exist('estimates','var') && ~isempty(estimates)
 	if ~exist('binwidth', 'var') || isempty(binwidth)
 		binwidth = 1;
 	end
-	k = size(estimates.weights, 2);
+	k = min(size(estimates.weights, 2), TOTAL_STEPS);
 % 	TOTAL_TIME = k;
 	for f = fieldnames(estimates.params)'
 		temp = repmat(estimates.params.(f{:})(1:k)', binwidth,1);
