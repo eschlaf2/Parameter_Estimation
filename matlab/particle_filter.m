@@ -257,6 +257,11 @@ for k = 1:min(K, K_MAX)		% for each observation
 
 	if ~mod(k, 10)
 		disp(['k = ' num2str(k)])
+		if ~mod(k, 100) && ~isempty(outfile)
+			save(outfile)
+			disp('saved');
+		end
+			
 	end
 	
 	if PLOT && ~mod(k, 1)
