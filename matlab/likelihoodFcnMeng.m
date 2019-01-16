@@ -1,4 +1,4 @@
-function [likelihood, window] = likelihoodFcnMeng(window, observation, W, Vth, delta)
+function [likelihood, window] = likelihoodFcnMeng(window, observation, W, thresh, delta, method)
 % Calculates probabilities of each particle given observation
 % Inputs:
 %	window ...					m x n x k array where m is the number of
@@ -14,20 +14,27 @@ h = 1/W; % weight
 b = h/10; % allowance
 N = size(window, 2); % number of particles
 
-window = squeeze(window(1, :, :))'; % Keep only the voltage of each particle
-crossings = sum(diff(window > Vth) > 0);
-% crossings = any(window > Vth);
+v = squeeze(window(1, :, :))'; % Keep only the voltage of each particle
+% u = squeeze(window(2, :, :))';
+% spikes = sum(diff(v > Vth) > 0);
+spikes = arrayfun(@(i) numel(get_spiketimes(v(:, i), thresh, method)), 1:N);
+% lambda = h * 1./(abs(spikes - observation).^2 + 1);
+lambda = h * (spikes == 1);
 
 % lambda = h * ones(1, N);	% Compute lambda_k of each particle
-% % lambda(window(1,:) >= Vth) = b;
-% lambda(all(window <= Vth)) = b;
+% lambda(window(1,:) >= Vth) = b;
+% lambda(all(v <= thresh)) = b;
+lambda(lambda == 0) = b;
 
-lambda = h * 1.1./(abs(crossings - observation) + 1);
 % lambda = h * ones(1, N);
 % lambda = h * (crossings == observation);
-lambda(crossings == 0) = b;
+% if ~observation
+% 	lambda(crossings == 0) = b;
+% end
 % lambda = b * ones(1, N);
 % lambda(abs(crossings - observation) < 2) = h;
 
-likelihood = exp(observation * log(lambda*delta) - lambda*delta);
+likelihood = exp(observation(1) * log(lambda*delta) - lambda*delta);
+% likelihood(any(v < -200)) = 0;
+% likelihood(any(u < -20)) = 0;
 
