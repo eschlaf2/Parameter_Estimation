@@ -1,4 +1,5 @@
 %% Set parameters
+% Be able to run from SCC (provide filename during batch submission)
 
 if ~exist('outfile', 'var')  || isempty(outfile)  % local run
 	clear
