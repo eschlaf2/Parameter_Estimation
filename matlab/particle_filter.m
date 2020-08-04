@@ -66,7 +66,7 @@ switch model
 				thresh = 30 * dt;
 		end
 		
-		delta = 1; % binwidth [ms]
+		delta = 2; % binwidth [ms]
 		if strcmp(likelihood, 'voltage')
 			delta = .3;
 		end
@@ -262,7 +262,7 @@ for k = 1:min(K, K_MAX)		% for each observation
 		
 	end
 
-	if ~mod(k, 10)
+	if ~mod(k, 100)
 		disp(['k = ' num2str(k)])
 		if ~mod(k, 100) && ~isempty(outfile)
 			save(outfile)
