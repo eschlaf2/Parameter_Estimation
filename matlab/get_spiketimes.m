@@ -10,7 +10,7 @@ switch method
 	case 'Vth'		
 % 		spikes = [false logical((V(1:end-1) < thresh) .* ...
 % 			V(2:end) > thresh)];
-		spikes = diff((V > thresh) > 0);
+		spikes = diff((V > thresh)) > 0;
 	case 'diff'
 		dV = diff(V);
 		spikes = diff(dV > thresh) > 0;
